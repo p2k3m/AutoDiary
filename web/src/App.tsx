@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuth } from './state/useAuth';
 import { ThemeButton } from './components/ThemeButton';
+import { OfflineBanner } from './components/OfflineBanner';
 import CalendarPage from './pages/CalendarPage';
 import DatePage from './pages/DatePage';
 import SettingsPage from './pages/SettingsPage';
@@ -9,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
+      <OfflineBanner />
       <header className="flex justify-end p-4">
         <ThemeButton />
       </header>
