@@ -42,7 +42,26 @@ export default function SettingsPage() {
       await putSettings(data);
       alert('Settings saved');
     } catch (err) {
-      console.error('Failed to save settings', err);
+      const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+      if (status === 412) {
+        const latest = await getSettings();
+        const diff = `Server:\n${JSON.stringify(
+          latest,
+          null,
+          2
+        )}\n\nYours:\n${JSON.stringify(data, null, 2)}`;
+        if (
+          confirm(
+            `Settings have changed on the server. Overwrite with your changes?\n\n${diff}`
+          )
+        ) {
+          await putSettings(data);
+          alert('Settings saved');
+        }
+      } else {
+        console.error('Failed to save settings', err);
+      }
     }
   };
 
