@@ -1,32 +1,62 @@
-interface AttachmentsProps {
-  files: File[];
-  onChange: (files: File[]) => void;
+interface AttachmentMeta {
+  name: string;
+  uuid: string;
 }
 
-export function Attachments({ files, onChange }: AttachmentsProps) {
+interface AttachmentsProps {
+  files: File[];
+  existing: AttachmentMeta[];
+  onFilesChange: (files: File[]) => void;
+  onExistingChange: (items: AttachmentMeta[]) => void;
+}
+
+export function Attachments({
+  files,
+  existing,
+  onFilesChange,
+  onExistingChange,
+}: AttachmentsProps) {
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files ? Array.from(e.target.files) : [];
-    onChange([...files, ...list]);
+    onFilesChange([...files, ...list]);
     e.target.value = '';
   };
 
-  const remove = (idx: number) => {
+  const removeFile = (idx: number) => {
     const next = [...files];
     next.splice(idx, 1);
-    onChange(next);
+    onFilesChange(next);
+  };
+
+  const removeExisting = (idx: number) => {
+    const next = [...existing];
+    next.splice(idx, 1);
+    onExistingChange(next);
   };
 
   return (
     <div className="mt-2">
       <input type="file" multiple onChange={handleSelect} />
-      {files.length > 0 && (
+      {(existing.length > 0 || files.length > 0) && (
         <ul className="mt-2 list-disc pl-4 text-sm">
-          {files.map((f, idx) => (
-            <li key={idx}>
+          {existing.map((f, idx) => (
+            <li key={f.uuid}>
               {f.name}
               <button
                 type="button"
-                onClick={() => remove(idx)}
+                onClick={() => removeExisting(idx)}
+                className="ml-2 text-red-600"
+              >
+                remove
+              </button>
+            </li>
+          ))}
+          {files.map((f, idx) => (
+            <li key={`new-${idx}`}>
+              {f.name}
+              <button
+                type="button"
+                onClick={() => removeFile(idx)}
                 className="ml-2 text-red-600"
               >
                 remove

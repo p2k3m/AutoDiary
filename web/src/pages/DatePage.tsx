@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { displayDate, formatYmd, parseYmd } from '../lib/date';
 import {
   refreshWeather,
@@ -9,6 +9,7 @@ import {
 import { InkGauge } from '../components/InkGauge';
 import { RoutineBar, type RoutineItem } from '../components/RoutineBar';
 import { Attachments } from '../components/Attachments';
+import { getEntry, putEntry, putAttachment } from '../lib/s3Client';
 
 export default function DatePage() {
   const { ymd } = useParams<{ ymd: string }>();
@@ -22,19 +23,58 @@ export default function DatePage() {
   const [text, setText] = useState('');
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [attachments, setAttachments] = useState<{
+    name: string;
+    uuid: string;
+  }[]>([]);
   const [location, setLocation] = useState<Location | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);
   const [fetched, setFetched] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const entryRef = useRef<Record<string, unknown>>({});
 
-  const handleNext = () => {
-    if (ymd && ymd !== todayYmd) {
-      navigate(`/date/${todayYmd}`);
-    } else {
-      const next = new Date(current);
-      next.setDate(current.getDate() + 1);
-      navigate(`/date/${formatYmd(next)}`);
+  const loadEntry = useCallback(async () => {
+    try {
+      const raw = await getEntry(ymdStr);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        entryRef.current = entry;
+        setText(entry.text ?? '');
+        setRoutines(entry.routines ?? []);
+        if (entry.city) {
+          setLocation({ lat: 0, lon: 0, city: entry.city as string });
+        }
+        if (entry.desc) {
+          setWeather({
+            tmax: entry.tmax as number,
+            tmin: entry.tmin as number,
+            desc: entry.desc as string,
+          });
+        }
+        setAttachments(entry.attachments ?? []);
+      }
+    } catch (err) {
+      console.error('Failed to load entry', err);
+    } finally {
+      setLoaded(true);
     }
+  }, [ymdStr]);
+
+  useEffect(() => {
+    void loadEntry();
+  }, [loadEntry]);
+
+  const handleNext = () => {
+    void (async () => {
+      await saveEntry();
+      if (ymd && ymd !== todayYmd) {
+        navigate(`/date/${todayYmd}`);
+      } else {
+        const next = new Date(current);
+        next.setDate(current.getDate() + 1);
+        navigate(`/date/${formatYmd(next)}`);
+      }
+    })();
   };
 
   const fetchMeta = useCallback(
@@ -61,6 +101,67 @@ export default function DatePage() {
     },
     [ymdStr]
   );
+
+  const saveEntry = useCallback(async () => {
+    const uploaded: { name: string; uuid: string }[] = [];
+    for (const file of files) {
+      const uuid = crypto.randomUUID();
+      try {
+        await putAttachment(ymdStr, uuid, file);
+        uploaded.push({ name: file.name, uuid });
+      } catch (err) {
+        console.error('Failed to upload attachment', err);
+      }
+    }
+    const allAttachments = [...attachments, ...uploaded];
+    if (uploaded.length > 0) {
+      setAttachments(allAttachments);
+      setFiles([]);
+    }
+    const entry = {
+      text,
+      routines,
+      city: location?.city,
+      desc: weather?.desc,
+      tmax: weather?.tmax,
+      tmin: weather?.tmin,
+      attachments: allAttachments,
+    };
+    entryRef.current = entry;
+    try {
+      await putEntry(ymdStr, JSON.stringify(entry));
+    } catch (err) {
+      console.error('Failed to save entry', err);
+    }
+  }, [files, attachments, text, routines, location, weather, ymdStr]);
+
+  const saveTimer = useRef<number>();
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      void saveEntry();
+    }, 1000);
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [text, routines, files, attachments, location, weather, loaded, saveEntry]);
+
+  useEffect(() => {
+    return () => {
+      void saveEntry();
+    };
+  }, [saveEntry]);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data && event.data.type === 's3-sync-complete') {
+        void loadEntry();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, [loadEntry]);
 
   const handleMainChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const mainVal = e.target.value;
@@ -132,7 +233,12 @@ export default function DatePage() {
         <InkGauge used={Math.min(lines.length, 28)} total={28} />
       </div>
 
-      <Attachments files={files} onChange={setFiles} />
+      <Attachments
+        files={files}
+        existing={attachments}
+        onFilesChange={setFiles}
+        onExistingChange={setAttachments}
+      />
 
       <button
         className="mt-4 rounded bg-blue-500 px-2 py-1 text-white"
