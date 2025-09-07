@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage';
 import SearchPage from './pages/SearchPage';
 import LandingPage from './pages/LandingPage';
 import WeeklyReviewPage from './pages/WeeklyReviewPage';
+import ConnectorsPage from './pages/ConnectorsPage';
 
 function Layout() {
   return (
@@ -18,6 +19,7 @@ function Layout() {
           <Link to="/calendar">Calendar</Link>
           <Link to="/search">Search</Link>
           <Link to="/weekly">Weekly Review</Link>
+          <Link to="/connectors">Connectors</Link>
           <Link to="/settings">Settings</Link>
         </nav>
         <ThemeButton />
@@ -29,6 +31,7 @@ function Layout() {
           <Route path="/date/:ymd" element={<DatePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/weekly" element={<WeeklyReviewPage />} />
+          <Route path="/connectors" element={<ConnectorsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
