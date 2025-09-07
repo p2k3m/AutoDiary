@@ -11,6 +11,7 @@ import {
   aws_iam as iam,
   aws_ssm as ssm,
   Duration,
+  CfnOutput,
   SecretValue,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -205,5 +206,23 @@ export class AppStack extends Stack {
       identityPoolId: identityPool.ref,
       roles: { authenticated: authRole.roleArn },
     });
+
+    new CfnOutput(this, 'CloudFrontDistributionUrl', {
+      value: `https://${distro.distributionDomainName}`,
+    });
+
+    new CfnOutput(this, 'CloudFrontDistributionDomain', {
+      value: distro.distributionDomainName,
+    });
+
+    new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
+
+    new CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+    });
+
+    new CfnOutput(this, 'IdentityPoolId', { value: identityPool.ref });
+
+    new CfnOutput(this, 'UserdataBucketName', { value: userBucket.bucketName });
   }
 }
