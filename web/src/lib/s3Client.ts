@@ -28,11 +28,21 @@ function settingsKey() {
   return `${prefix}/settings.json`;
 }
 
+function weeklyKey(yyyy: string, ww: string) {
+  const prefix = useAuth.getState().userPrefix ?? '';
+  return `${prefix}/weekly/${yyyy}-${ww}.json`;
+}
+
 export interface Settings {
   theme: 'light' | 'dark' | 'paper';
   routineTemplate: { text: string; done: boolean }[];
   timezone: string;
   e2ee: boolean;
+}
+
+export interface WeeklyData {
+  digests?: string[];
+  summary?: string;
 }
 
 export async function getEntry(ymd: string): Promise<string | null> {
@@ -83,6 +93,33 @@ export async function listMonth(yyyy: string, mm: string): Promise<string[]> {
       .filter((k) => k)
       .map((k) => k.slice(prefix.length + 1).replace(/\.json$/, '')) ?? []
   );
+}
+
+export async function getWeekly(
+  yyyy: string,
+  ww: string
+): Promise<WeeklyData | null> {
+  const client = getClient();
+  const key = weeklyKey(yyyy, ww);
+  const etag = await getEtag(key);
+  try {
+    const res = await client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key, IfNoneMatch: etag })
+    );
+    const body = await new Response(res.Body as ReadableStream).text();
+    if (res.ETag) await setEtag(key, res.ETag);
+    return JSON.parse(body) as WeeklyData;
+  } catch (err) {
+    const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    if (status === 304) {
+      return null;
+    }
+    if (status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function getSettings(): Promise<Settings | null> {
