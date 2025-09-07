@@ -19,6 +19,7 @@ const userPoolId = import.meta.env.VITE_USER_POOL_ID as string;
 const clientId = import.meta.env.VITE_USER_POOL_CLIENT_ID as string;
 const identityPoolId = import.meta.env.VITE_IDENTITY_POOL_ID as string;
 const hostedUiDomain = import.meta.env.VITE_HOSTED_UI_DOMAIN as string;
+const testMode = import.meta.env.VITE_TEST_MODE === 'true';
 
 function decodeJwt<T extends Record<string, unknown>>(token: string): T {
   const payload = token.split('.')[1];
@@ -28,26 +29,43 @@ function decodeJwt<T extends Record<string, unknown>>(token: string): T {
 
 const redirectUri = typeof window !== 'undefined' ? window.location.origin : '';
 
-export const useAuth = create<AuthState>((set) => ({
-  status: 'loading',
-  login: (identityProvider) => {
-    const url =
-      `https://${hostedUiDomain}/login?` +
-      `client_id=${clientId}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      (identityProvider
-        ? `&identity_provider=${encodeURIComponent(identityProvider)}`
-        : '');
-    window.location.assign(url);
-  },
-  logout: () => {
-    localStorage.removeItem('idToken');
-    set({ status: 'unauthenticated', credentialProvider: undefined, userPrefix: undefined });
-    const url =
-      `https://${hostedUiDomain}/logout?` +
-      `client_id=${clientId}&logout_uri=${encodeURIComponent(redirectUri)}`;
-    window.location.assign(url);
-  },
-}));
+export const useAuth = create<AuthState>((set) => {
+  if (testMode) {
+    const stubCredentialProvider: ReturnType<typeof fromCognitoIdentityPool> = async () => ({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      sessionToken: 'test',
+    });
+    return {
+      status: 'authenticated',
+      credentialProvider: stubCredentialProvider,
+      userPrefix: 'private/test-user',
+      login: () => {},
+      logout: () => set({ status: 'unauthenticated', credentialProvider: undefined, userPrefix: undefined }),
+    };
+  }
+
+  return {
+    status: 'loading',
+    login: (identityProvider) => {
+      const url =
+        `https://${hostedUiDomain}/login?` +
+        `client_id=${clientId}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        (identityProvider
+          ? `&identity_provider=${encodeURIComponent(identityProvider)}`
+          : '');
+      window.location.assign(url);
+    },
+    logout: () => {
+      localStorage.removeItem('idToken');
+      set({ status: 'unauthenticated', credentialProvider: undefined, userPrefix: undefined });
+      const url =
+        `https://${hostedUiDomain}/logout?` +
+        `client_id=${clientId}&logout_uri=${encodeURIComponent(redirectUri)}`;
+      window.location.assign(url);
+    },
+  };
+});
 
 async function init() {
   const hash = new URLSearchParams(window.location.hash.substring(1));
@@ -79,7 +97,7 @@ async function init() {
   });
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !testMode) {
   // kick off initialization on first import
   init().catch(() => useAuth.setState({ status: 'unauthenticated' }));
 }
