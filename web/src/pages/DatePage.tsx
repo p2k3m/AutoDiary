@@ -11,6 +11,8 @@ import { RoutineBar, type RoutineItem } from '../components/RoutineBar';
 import { Attachments } from '../components/Attachments';
 import { useDiaryStore } from '../state/useDiaryStore';
 
+const INK_TOTAL = 1000;
+
 export default function DatePage() {
   const { ymd } = useParams<{ ymd: string }>();
   const navigate = useNavigate();
@@ -40,6 +42,7 @@ export default function DatePage() {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [fetched, setFetched] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const inkUsed = text.length;
 
   const loadEntry = useCallback(async () => {
     await loadEntryFromStore(ymdStr);
@@ -110,7 +113,7 @@ export default function DatePage() {
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
-  }, [text, routineTicks, attachments, location, weather, loaded, saveEntry]);
+  }, [text, routineTicks, attachments, location, weather, inkUsed, loaded, saveEntry]);
 
   useEffect(() => {
     return () => {
@@ -133,7 +136,7 @@ export default function DatePage() {
     const over = text.split('\n').slice(28).join('\n');
     const newText = over ? `${mainVal}\n${over}` : mainVal;
     setText(newText);
-    updateEntry(ymdStr, { text: newText });
+    updateEntry(ymdStr, { text: newText, inkUsed: newText.length });
     if (!fetched && newText.trim() !== '') {
       setFetched(true);
       fetchMeta();
@@ -145,7 +148,7 @@ export default function DatePage() {
     const mainPart = text.split('\n').slice(0, 28).join('\n');
     const newText = overVal ? `${mainPart}\n${overVal}` : mainPart;
     setText(newText);
-    updateEntry(ymdStr, { text: newText });
+    updateEntry(ymdStr, { text: newText, inkUsed: newText.length });
     if (!fetched && newText.trim() !== '') {
       setFetched(true);
       fetchMeta();
@@ -158,11 +161,7 @@ export default function DatePage() {
 
   return (
     <div className="paper-page relative p-4">
-      <InkGauge
-        used={Math.min(lines.length, 28)}
-        total={28}
-        className="absolute right-2 top-2 w-20"
-      />
+      <InkGauge used={inkUsed} total={INK_TOTAL} className="absolute right-2 top-2 w-20" />
       <header className="mb-4">
         <div className="flex items-center gap-2 text-xl font-bold">
           <span>{displayDate(ymdStr)}</span>

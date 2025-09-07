@@ -41,6 +41,7 @@ function connectorKey(provider: string) {
 }
 
 interface RawEntry {
+  text?: string;
   loc?: { lat?: number; lon?: number; city?: string };
   weather?: { tmax?: number; tmin?: number; desc?: string };
   city?: string;
@@ -49,6 +50,7 @@ interface RawEntry {
   tmax?: number;
   tmin?: number;
   desc?: string;
+  inkUsed?: number;
   [key: string]: unknown;
 }
 
@@ -76,6 +78,9 @@ function normalizeEntry(body: string): string {
       delete data.tmax;
       delete data.tmin;
       delete data.desc;
+    }
+    if (typeof data.text === 'string' && typeof data.inkUsed !== 'number') {
+      data.inkUsed = data.text.length;
     }
     return JSON.stringify(data);
   } catch {
