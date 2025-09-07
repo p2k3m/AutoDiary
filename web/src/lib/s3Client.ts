@@ -119,8 +119,12 @@ export interface Settings {
 }
 
 export interface WeeklyData {
-  digests?: string[];
-  summary?: string;
+  connectorsDigest?: {
+    meetingsHours: number;
+    topContacts: string[];
+    photosCount: number;
+  };
+  aiSummary?: string;
 }
 
 export type ConnectorStatus = 'added' | 'paused' | 'revoked';
@@ -206,7 +210,19 @@ export async function getWeekly(
     );
     const body = await new Response(res.Body as ReadableStream).text();
     if (res.ETag) await setEtag(key, res.ETag);
-    return JSON.parse(body) as WeeklyData;
+    const parsed = JSON.parse(body) as {
+      connectorsDigest?: {
+        meetingsHours: number;
+        topContacts: string[];
+        photosCount: number;
+      };
+      aiSummary?: string;
+      summary?: string;
+    };
+    return {
+      connectorsDigest: parsed.connectorsDigest,
+      aiSummary: parsed.aiSummary ?? parsed.summary,
+    };
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
