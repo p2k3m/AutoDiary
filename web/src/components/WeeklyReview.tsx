@@ -13,6 +13,11 @@ interface HabitStat {
   prevTotal: number;
 }
 
+interface Tip {
+  tip: string;
+  count: number;
+}
+
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -33,7 +38,7 @@ function getIsoWeek(date: Date): number {
 export function WeeklyReview() {
   const [stats, setStats] = useState<HabitStat[]>([]);
   const [extra, setExtra] = useState<WeeklyData | null>(null);
-  const [missTips, setMissTips] = useState<string[]>([]);
+  const [missTips, setMissTips] = useState<Tip[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -134,7 +139,7 @@ export function WeeklyReview() {
         'Saturday',
         'Sunday',
       ];
-      const suggestions: string[] = [];
+      const suggestions: Tip[] = [];
       for (const [habit, days] of missesThisWeek.entries()) {
         for (const day of days) {
           let count = 1;
@@ -157,9 +162,10 @@ export function WeeklyReview() {
           const s = map.get(habit);
           if (s) s.misses[day] = count;
           if (count >= 5) {
-            suggestions.push(
-              `${habit} has been missed ${count} ${weekdayNames[day]}s in a row. Try moving to mornings.`
-            );
+            suggestions.push({
+              tip: `${habit} has been missed ${count} ${weekdayNames[day]}s in a row. Try moving to mornings.`,
+              count,
+            });
           }
         }
       }
@@ -185,12 +191,28 @@ export function WeeklyReview() {
     })();
   }, []);
 
-  const improvements = [
+  const improvementCandidates = [
     ...stats
       .filter((h) => h.total > 0 && h.done / h.total < 0.6)
-      .map((h) => `Focus more on ${h.name} (only ${h.done}/${h.total}).`),
-    ...missTips,
+      .map((h) => ({
+        tip: `Focus more on ${h.name} (only ${h.done}/${h.total}).`,
+        completion: h.done / h.total,
+        missCount: 0,
+      })),
+    ...missTips.map((t) => ({
+      tip: t.tip,
+      completion: 1,
+      missCount: t.count,
+    })),
   ];
+
+  const improvements = improvementCandidates
+    .sort((a, b) => {
+      if (b.missCount !== a.missCount) return b.missCount - a.missCount;
+      return a.completion - b.completion;
+    })
+    .slice(0, 3)
+    .map((c) => c.tip);
 
   return (
     <div>
