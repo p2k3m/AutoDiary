@@ -40,6 +40,23 @@ export function attachmentKey(ymd: string, uuid: string) {
   return `${prefix}/attachments/${yyyy}/${mm}/${dd}/${uuid}`;
 }
 
+export async function putAttachment(
+  ymd: string,
+  uuid: string,
+  file: File
+): Promise<void> {
+  const client = getClient();
+  const key = attachmentKey(ymd, uuid);
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: file,
+      ContentType: file.type,
+    })
+  );
+}
+
 export interface Settings {
   theme: 'light' | 'dark' | 'paper';
   routineTemplate: { text: string; done: boolean }[];

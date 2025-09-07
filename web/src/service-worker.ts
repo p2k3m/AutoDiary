@@ -84,7 +84,13 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('sync', (event) => {
   const syncEvent = event as SyncEvent;
   if (syncEvent.tag === 's3-sync') {
-    syncEvent.waitUntil(replayQueue());
+    syncEvent.waitUntil(
+      (async () => {
+        await replayQueue();
+        const clients = await self.clients.matchAll();
+        clients.forEach((c) => c.postMessage({ type: 's3-sync-complete' }));
+      })()
+    );
   }
 });
 
