@@ -221,6 +221,8 @@ export class AppStack extends Stack {
       value: distro.distributionDomainName,
     });
 
+    new CfnOutput(this, 'Domain', { value: props.domain });
+
     new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
 
     new CfnOutput(this, 'UserPoolClientId', {
