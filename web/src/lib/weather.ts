@@ -73,9 +73,14 @@ export async function refreshWeather(
   const city = loc.city ?? (await reverseGeocode(loc.lat, loc.lon));
   const weather = await getDailyWeather(loc.lat, loc.lon, date);
   if (!weather) return null;
-  if (city) entry.city = city;
-  entry.tmax = weather.tmax;
-  entry.tmin = weather.tmin;
-  entry.desc = weather.desc;
+  if (city) {
+    entry.loc = { ...(entry.loc as Record<string, unknown>), city };
+  }
+  entry.loc = { ...(entry.loc as Record<string, unknown>), lat: loc.lat, lon: loc.lon };
+  entry.weather = {
+    tmax: weather.tmax,
+    tmin: weather.tmin,
+    desc: weather.desc,
+  };
   return { location: { ...loc, city }, weather };
 }
