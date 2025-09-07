@@ -9,6 +9,7 @@ import {
   aws_route53_targets as targets,
   aws_cognito as cognito,
   aws_iam as iam,
+  aws_ssm as ssm,
   Duration,
   SecretValue,
 } from 'aws-cdk-lib';
@@ -75,22 +76,55 @@ export class AppStack extends Stack {
       selfSignUpEnabled: false,
     });
 
+    const googleClientId = ssm.StringParameter.valueForStringParameter(
+      this,
+      'google-client-id'
+    );
+    const googleClientSecret = ssm.StringParameter.valueForStringParameter(
+      this,
+      'google-client-secret'
+    );
+    const appleClientId = ssm.StringParameter.valueForStringParameter(
+      this,
+      'apple-client-id'
+    );
+    const appleTeamId = ssm.StringParameter.valueForStringParameter(
+      this,
+      'apple-team-id'
+    );
+    const appleKeyId = ssm.StringParameter.valueForStringParameter(
+      this,
+      'apple-key-id'
+    );
+    const applePrivateKey = ssm.StringParameter.valueForStringParameter(
+      this,
+      'apple-private-key'
+    );
+    const microsoftClientId = ssm.StringParameter.valueForStringParameter(
+      this,
+      'microsoft-client-id'
+    );
+    const microsoftClientSecret = ssm.StringParameter.valueForStringParameter(
+      this,
+      'microsoft-client-secret'
+    );
+
     const googleProvider = new cognito.UserPoolIdentityProviderGoogle(
       this,
       'Google',
       {
         userPool,
-        clientId: 'google-client-id',
-        clientSecret: 'google-client-secret',
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
       }
     );
 
     const appleProvider = new cognito.UserPoolIdentityProviderApple(this, 'Apple', {
       userPool,
-      clientId: 'apple-client-id',
-      teamId: 'apple-team-id',
-      keyId: 'apple-key-id',
-      privateKeyValue: SecretValue.unsafePlainText('apple-private-key'),
+      clientId: appleClientId,
+      teamId: appleTeamId,
+      keyId: appleKeyId,
+      privateKeyValue: SecretValue.unsafePlainText(applePrivateKey),
     });
 
     const microsoftProvider = new cognito.UserPoolIdentityProviderOidc(
@@ -98,8 +132,8 @@ export class AppStack extends Stack {
       'Microsoft',
       {
         userPool,
-        clientId: 'microsoft-client-id',
-        clientSecret: 'microsoft-client-secret',
+        clientId: microsoftClientId,
+        clientSecret: microsoftClientSecret,
         issuerUrl: 'https://login.microsoftonline.com/common/v2.0',
         name: 'microsoft',
       }
@@ -127,9 +161,9 @@ export class AppStack extends Stack {
         },
       ],
       supportedLoginProviders: {
-        'accounts.google.com': 'google-client-id',
-        'appleid.apple.com': 'apple-client-id',
-        'login.microsoftonline.com': 'microsoft-client-id',
+        'accounts.google.com': googleClientId,
+        'appleid.apple.com': appleClientId,
+        'login.microsoftonline.com': microsoftClientId,
       },
     });
 
@@ -145,10 +179,13 @@ export class AppStack extends Stack {
 
     authRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-        resources: [
-          userBucket.arnForObjects('private/${cognito-identity.amazonaws.com:sub}/*'),
-        ],
+        actions: ['s3:GetObject', 's3:PutObject'],
+        resources: [userBucket.arnForObjects('*')],
+        conditions: {
+          StringLike: {
+            's3:prefix': 'private/${cognito-identity.amazonaws.com:sub}/*',
+          },
+        },
       })
     );
 
