@@ -18,6 +18,9 @@ html[data-theme='paper'] {
   --bg: #f8f5e4;
   --text: #111111;
   --paper: #f8f5e4;
+}
+
+html[data-theme='paper'] .paper-page {
   font-family: 'Patrick Hand', cursive;
 }
 
