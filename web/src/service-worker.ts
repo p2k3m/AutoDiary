@@ -17,7 +17,14 @@ interface SyncRegistration extends ServiceWorkerRegistration {
 }
 
 const APP_SHELL_CACHE = 'app-shell-v1';
+const ENTRY_CACHE = 'entry-cache-v1';
 const QUEUE_DB = 's3-write-queue';
+const ENTRY_DB = 'entry-cache';
+const entryDbPromise = openDB(ENTRY_DB, 1, {
+  upgrade(db) {
+    db.createObjectStore('entries');
+  },
+});
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -32,7 +39,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.filter((k) => k !== APP_SHELL_CACHE).map((k) => caches.delete(k))
+        keys
+          .filter((k) => k !== APP_SHELL_CACHE && k !== ENTRY_CACHE)
+          .map((k) => caches.delete(k))
       )
     )
   );
@@ -41,6 +50,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+  if (
+    req.method === 'GET' &&
+    req.url.includes('amazonaws.com') &&
+    /\/entries\/\d{4}\/\d{2}\/\d{2}\.json/.test(req.url)
+  ) {
+    event.respondWith(handleEntryRequest(req));
+    return;
+  }
   if (req.method === 'GET' && (req.mode === 'navigate' || req.destination === 'document')) {
     event.respondWith(
       caches.match(req).then((res) => {
@@ -80,6 +97,37 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+async function handleEntryRequest(req: Request): Promise<Response> {
+  const ymd = extractYmd(req.url);
+  try {
+    const res = await fetch(req);
+    const copy = res.clone();
+    caches.open(ENTRY_CACHE).then((cache) => cache.put(req, copy.clone()));
+    if (ymd) {
+      const body = await copy.text();
+      await (await entryDbPromise).put('entries', body, ymd);
+    }
+    return res;
+  } catch {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    if (ymd) {
+      const body = await (await entryDbPromise).get('entries', ymd);
+      if (body) {
+        return new Response(body, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    return new Response(null, { status: 503 });
+  }
+}
+
+function extractYmd(url: string): string | null {
+  const m = url.match(/\/entries\/(\d{4})\/(\d{2})\/(\d{2})\.json/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+}
 
 self.addEventListener('sync', (event) => {
   const syncEvent = event as SyncEvent;
