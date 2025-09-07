@@ -1,6 +1,4 @@
 node_modules/
 dist/
-web/node_modules/
-web/dist/
-infra/node_modules/
-infra/dist/
+packages/*/node_modules/
+packages/*/dist/
