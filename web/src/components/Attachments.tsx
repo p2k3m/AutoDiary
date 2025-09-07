@@ -26,6 +26,7 @@ export function Attachments({
   onExistingChange,
 }: AttachmentsProps) {
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [dragging, setDragging] = useState(false);
   const region = import.meta.env.VITE_REGION as string;
   const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
 
@@ -53,8 +54,7 @@ export function Attachments({
     void loadUrls();
   }, [existing, ymd, client, bucket]);
 
-  const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files ? Array.from(e.target.files) : [];
+  const addFiles = async (list: File[]) => {
     const added: AttachmentMeta[] = [];
     const urlMap: Record<string, string> = {};
     for (const file of list) {
@@ -81,7 +81,29 @@ export function Attachments({
       onExistingChange([...existing, ...added]);
       setUrls((prev) => ({ ...prev, ...urlMap }));
     }
+  };
+
+  const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    await addFiles(list);
     e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    const list = e.dataTransfer.files ? Array.from(e.dataTransfer.files) : [];
+    void addFiles(list);
   };
 
   const removeExisting = (idx: number) => {
@@ -96,7 +118,14 @@ export function Attachments({
   };
 
   return (
-    <div className="mt-2">
+    <div
+      className={`mt-2 border-2 border-dashed p-2 ${
+        dragging ? 'bg-blue-50' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <input type="file" multiple onChange={handleSelect} />
       {existing.length > 0 && (
         <ul className="mt-2 list-disc pl-4 text-sm">
