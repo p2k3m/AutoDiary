@@ -20,10 +20,6 @@ html[data-theme='paper'] {
   --paper: #f8f5e4;
 }
 
-html[data-theme='paper'] .paper-page {
-  font-family: 'Patrick Hand', cursive;
-}
-
 body {
   @apply bg-[var(--bg)] text-[var(--text)] min-h-screen;
 }
@@ -32,4 +28,8 @@ body {
   background: var(--paper);
   background-image: linear-gradient(#e0dccc 1px, transparent 1px);
   background-size: 100% 1.5rem;
+}
+
+.handwriting {
+  font-family: 'Patrick Hand', cursive;
 }

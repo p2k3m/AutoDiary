@@ -208,7 +208,7 @@ export default function DatePage() {
 
       <textarea
         rows={28}
-        className="w-full resize-none bg-transparent outline-none"
+        className="handwriting w-full resize-none bg-transparent outline-none"
         value={mainText}
         onChange={handleMainChange}
       />
@@ -216,7 +216,7 @@ export default function DatePage() {
       <details className="mt-2" open={Boolean(overflowText)}>
         <summary>Overflow</summary>
         <textarea
-          className="mt-2 w-full resize-none bg-transparent outline-none"
+          className="handwriting mt-2 w-full resize-none bg-transparent outline-none"
           value={overflowText}
           onChange={handleOverflowChange}
           rows={Math.max(overflowText.split('\n').length, 1)}
