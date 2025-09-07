@@ -20,7 +20,8 @@ function getClient() {
 
 function entryKey(ymd: string) {
   const prefix = useAuth.getState().userPrefix ?? '';
-  return `${prefix}/${ymd}.json`;
+  const [yyyy, mm, dd] = ymd.split('-');
+  return `${prefix}/entries/${yyyy}/${mm}/${dd}.json`;
 }
 
 function settingsKey() {
@@ -31,6 +32,12 @@ function settingsKey() {
 function weeklyKey(yyyy: string, ww: string) {
   const prefix = useAuth.getState().userPrefix ?? '';
   return `${prefix}/weekly/${yyyy}-${ww}.json`;
+}
+
+export function attachmentKey(ymd: string, uuid: string) {
+  const prefix = useAuth.getState().userPrefix ?? '';
+  const [yyyy, mm, dd] = ymd.split('-');
+  return `${prefix}/attachments/${yyyy}/${mm}/${dd}/${uuid}`;
 }
 
 export interface Settings {
@@ -84,14 +91,14 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
 
 export async function listMonth(yyyy: string, mm: string): Promise<string[]> {
   const client = getClient();
-  const prefix = `${useAuth.getState().userPrefix ?? ''}/${yyyy}-${mm}`;
+  const prefix = `${useAuth.getState().userPrefix ?? ''}/entries/${yyyy}/${mm}/`;
   const res = await client.send(
     new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix })
   );
   return (
     res.Contents?.map((obj) => obj.Key || '')
       .filter((k) => k)
-      .map((k) => k.slice(prefix.length + 1).replace(/\.json$/, '')) ?? []
+      .map((k) => k.slice(prefix.length).replace(/\.json$/, '')) ?? []
   );
 }
 
