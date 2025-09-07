@@ -121,7 +121,34 @@ export default function DatePage() {
     try {
       await putEntry(ymdStr, JSON.stringify(entry));
     } catch (err) {
-      console.error('Failed to save entry', err);
+      const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+      if (status === 412) {
+        try {
+          const latestRaw = await getEntry(ymdStr);
+          const latest = latestRaw ? JSON.parse(latestRaw) : {};
+          const remoteText = (latest as { text?: string }).text ?? '';
+          const localText = entry.text ?? '';
+          let resolved = entry;
+          if (remoteText !== localText) {
+            const merge = window.confirm(
+              `Entry has changed elsewhere.\n\nRemote:\n${remoteText}\n\nLocal:\n${localText}\n\nPress OK to merge or Cancel to overwrite.`
+            );
+            resolved = merge
+              ? { ...latest, ...entry, text: `${remoteText}\n${localText}` }
+              : { ...latest, ...entry };
+          } else {
+            resolved = { ...latest, ...entry };
+          }
+          entryRef.current = resolved;
+          setText(resolved.text ?? '');
+          await putEntry(ymdStr, JSON.stringify(resolved));
+        } catch (e) {
+          console.error('Failed to resolve entry conflict', e);
+        }
+      } else {
+        console.error('Failed to save entry', err);
+      }
     }
   }, [attachments, text, routineTicks, location, weather, ymdStr]);
 
