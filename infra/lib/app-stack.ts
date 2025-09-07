@@ -9,6 +9,8 @@ import {
   aws_route53_targets as targets,
   aws_cognito as cognito,
   aws_iam as iam,
+  Duration,
+  SecretValue,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
@@ -41,8 +43,18 @@ export class AppStack extends Stack {
     });
 
     const distro = new cf.Distribution(this, 'Distribution', {
-      defaultBehavior: { origin: new origins.S3Origin(webBucket) },
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket),
+      },
       defaultRootObject: 'index.html',
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: Duration.seconds(0),
+        },
+      ],
       priceClass: cf.PriceClass.PRICE_CLASS_100,
       certificate: acm.Certificate.fromCertificateArn(this, 'Cert', props.certArn),
       domainNames: [props.domain, `www.${props.domain}`],
@@ -63,14 +75,62 @@ export class AppStack extends Stack {
       selfSignUpEnabled: false,
     });
 
+    const googleProvider = new cognito.UserPoolIdentityProviderGoogle(
+      this,
+      'Google',
+      {
+        userPool,
+        clientId: 'google-client-id',
+        clientSecret: 'google-client-secret',
+      }
+    );
+
+    const appleProvider = new cognito.UserPoolIdentityProviderApple(this, 'Apple', {
+      userPool,
+      clientId: 'apple-client-id',
+      teamId: 'apple-team-id',
+      keyId: 'apple-key-id',
+      privateKeyValue: SecretValue.unsafePlainText('apple-private-key'),
+    });
+
+    const microsoftProvider = new cognito.UserPoolIdentityProviderOidc(
+      this,
+      'Microsoft',
+      {
+        userPool,
+        clientId: 'microsoft-client-id',
+        clientSecret: 'microsoft-client-secret',
+        issuerUrl: 'https://login.microsoftonline.com/common/v2.0',
+        name: 'microsoft',
+      }
+    );
+
+    const userPoolClient = userPool.addClient('web', {
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.COGNITO,
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+        cognito.UserPoolClientIdentityProvider.APPLE,
+        cognito.UserPoolClientIdentityProvider.custom('microsoft'),
+      ],
+    });
+
+    userPoolClient.node.addDependency(googleProvider);
+    userPoolClient.node.addDependency(appleProvider);
+    userPoolClient.node.addDependency(microsoftProvider);
+
     const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
       allowUnauthenticatedIdentities: false,
       cognitoIdentityProviders: [
         {
-          clientId: userPool.addClient('web').userPoolClientId,
+          clientId: userPoolClient.userPoolClientId,
           providerName: userPool.userPoolProviderName,
         },
       ],
+      supportedLoginProviders: {
+        'accounts.google.com': 'google-client-id',
+        'appleid.apple.com': 'apple-client-id',
+        'login.microsoftonline.com': 'microsoft-client-id',
+      },
     });
 
     const authRole = new iam.Role(this, 'AuthRole', {
@@ -83,7 +143,26 @@ export class AppStack extends Stack {
       ),
     });
 
-    userBucket.grantReadWrite(authRole, 'private/${cognito-identity.amazonaws.com:sub}/*');
+    authRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: [
+          userBucket.arnForObjects('private/${cognito-identity.amazonaws.com:sub}/*'),
+        ],
+      })
+    );
+
+    authRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:ListBucket'],
+        resources: [userBucket.bucketArn],
+        conditions: {
+          StringLike: {
+            's3:prefix': 'private/${cognito-identity.amazonaws.com:sub}/*',
+          },
+        },
+      })
+    );
 
     new cognito.CfnIdentityPoolRoleAttachment(this, 'RoleAttach', {
       identityPoolId: identityPool.ref,
