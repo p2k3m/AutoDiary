@@ -5,7 +5,7 @@ import {
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { useAuth } from '../state/useAuth';
-import { getEtag, setEtag } from './etagCache';
+import { getEtag, setEtag, clearEtag } from './etagCache';
 
 const region = import.meta.env.VITE_REGION as string;
 const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
@@ -78,15 +78,26 @@ export async function getEntry(ymd: string): Promise<string | null> {
 export async function putEntry(ymd: string, body: string): Promise<void> {
   const client = getClient();
   const key = entryKey(ymd);
-  const res = await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: body,
-      ContentType: 'application/json',
-    })
-  );
-  if (res.ETag) await setEtag(key, res.ETag);
+  const etag = await getEtag(key);
+  try {
+    const res = await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: body,
+        ContentType: 'application/json',
+        ...(etag ? { IfMatch: etag } : {}),
+      })
+    );
+    if (res.ETag) await setEtag(key, res.ETag);
+  } catch (err) {
+    const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    if (status === 412) {
+      await clearEtag(key);
+    }
+    throw err;
+  }
 }
 
 export async function listMonth(yyyy: string, mm: string): Promise<string[]> {
@@ -156,14 +167,25 @@ export async function getSettings(): Promise<Settings | null> {
 export async function putSettings(data: Settings): Promise<void> {
   const client = getClient();
   const key = settingsKey();
-  const res = await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: JSON.stringify(data),
-      ContentType: 'application/json',
-    })
-  );
-  if (res.ETag) await setEtag(key, res.ETag);
+  const etag = await getEtag(key);
+  try {
+    const res = await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: JSON.stringify(data),
+        ContentType: 'application/json',
+        ...(etag ? { IfMatch: etag } : {}),
+      })
+    );
+    if (res.ETag) await setEtag(key, res.ETag);
+  } catch (err) {
+    const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    if (status === 412) {
+      await clearEtag(key);
+    }
+    throw err;
+  }
 }
 
