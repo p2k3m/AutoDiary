@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuth } from './state/useAuth';
 import { ThemeButton } from './components/ThemeButton';
 import CalendarPage from './pages/CalendarPage';
 import DatePage from './pages/DatePage';
@@ -23,6 +25,18 @@ function Layout() {
 }
 
 export default function App() {
+  const { status, login } = useAuth();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      login();
+    }
+  }, [status, login]);
+
+  if (status !== 'authenticated') {
+    return null;
+  }
+
   return (
     <BrowserRouter>
       <Layout />
