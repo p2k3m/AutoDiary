@@ -47,7 +47,8 @@ export function WeeklyReview() {
 
       for (let i = 0; i < raw.length; i++) {
         const entry = raw[i] ? JSON.parse(raw[i] as string) : {};
-        const routines: { text: string; done: boolean }[] = entry.routines ?? [];
+        const routines: { text: string; done: boolean }[] =
+          entry.routineTicks ?? entry.routines ?? [];
         const todays = new Set<string>();
         routines.forEach((r) => {
           const s = map.get(r.text) ?? { done: 0, total: 0, streak: 0 };
