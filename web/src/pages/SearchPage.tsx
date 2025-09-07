@@ -27,7 +27,8 @@ export default function SearchPage() {
       keys: ['text', 'ymd'],
       threshold: 0.4,
     });
-    setResults(fuse.search(query).map((r) => r.item));
+    const matches = new Set(fuse.search(query).map((r) => r.item.ymd));
+    setResults(entries.filter((e) => matches.has(e.ymd)));
   }, [query, entries]);
 
   return (

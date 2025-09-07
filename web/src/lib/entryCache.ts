@@ -32,5 +32,5 @@ export async function getCachedEntries(
       results.push({ ymd: key, text });
     }
   }
-  return results;
+  return results.sort((a, b) => b.ymd.localeCompare(a.ymd));
 }
