@@ -7,6 +7,7 @@ interface HabitStat {
   done: number;
   total: number;
   streak: number;
+  misses: number[]; // consecutive misses per weekday
 }
 
 function startOfWeek(date: Date): Date {
@@ -29,6 +30,7 @@ function getIsoWeek(date: Date): number {
 export function WeeklyReview() {
   const [stats, setStats] = useState<HabitStat[]>([]);
   const [extra, setExtra] = useState<WeeklyData | null>(null);
+  const [missTips, setMissTips] = useState<string[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -42,8 +44,14 @@ export function WeeklyReview() {
       }
 
       const raw = await Promise.all(ymds.map((d) => getEntry(d)));
-      const map = new Map<string, { done: number; total: number; streak: number }>();
+      const map = new Map<string, {
+        done: number;
+        total: number;
+        streak: number;
+        misses: number[];
+      }>();
       const streak = new Map<string, number>();
+      const missesThisWeek = new Map<string, number[]>();
 
       for (let i = 0; i < raw.length; i++) {
         const entry = raw[i] ? JSON.parse(raw[i] as string) : {};
@@ -51,16 +59,27 @@ export function WeeklyReview() {
           entry.routineTicks ?? entry.routines ?? [];
         const todays = new Set<string>();
         routines.forEach((r) => {
-          const s = map.get(r.text) ?? { done: 0, total: 0, streak: 0 };
+          const s =
+            map.get(r.text) ?? {
+              done: 0,
+              total: 0,
+              streak: 0,
+              misses: Array(7).fill(0),
+            };
           s.total += 1;
           if (r.done) {
             s.done += 1;
             const cur = (streak.get(r.text) ?? 0) + 1;
             streak.set(r.text, cur);
             s.streak = cur;
+            s.misses[i] = 0;
           } else {
             streak.set(r.text, 0);
             s.streak = 0;
+            s.misses[i] = (s.misses[i] ?? 0) + 1;
+            const arr = missesThisWeek.get(r.text) ?? [];
+            arr.push(i);
+            missesThisWeek.set(r.text, arr);
           }
           map.set(r.text, s);
           todays.add(r.text);
@@ -75,7 +94,47 @@ export function WeeklyReview() {
         }
       }
 
+      const weekdayNames = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+      const suggestions: string[] = [];
+      for (const [habit, days] of missesThisWeek.entries()) {
+        for (const day of days) {
+          let count = 1;
+          const checkDate = new Date(start);
+          checkDate.setDate(start.getDate() + day);
+          while (count < 5) {
+            checkDate.setDate(checkDate.getDate() - 7);
+            const prev = await getEntry(formatYmd(checkDate));
+            if (!prev) break;
+            const e = JSON.parse(prev);
+            const prevRoutines: { text: string; done: boolean }[] =
+              e.routineTicks ?? e.routines ?? [];
+            const found = prevRoutines.find((r) => r.text === habit);
+            if (found && !found.done) {
+              count += 1;
+            } else {
+              break;
+            }
+          }
+          const s = map.get(habit);
+          if (s) s.misses[day] = count;
+          if (count >= 5) {
+            suggestions.push(
+              `${habit} has been missed ${count} ${weekdayNames[day]}s in a row. Try moving to mornings.`
+            );
+          }
+        }
+      }
+
       setStats(Array.from(map.entries()).map(([name, s]) => ({ name, ...s })));
+      setMissTips(suggestions);
 
       const yyyy = start.getFullYear().toString();
       const ww = getIsoWeek(start).toString().padStart(2, '0');
@@ -88,9 +147,12 @@ export function WeeklyReview() {
     })();
   }, []);
 
-  const improvements = stats
-    .filter((h) => h.total > 0 && h.done / h.total < 0.6)
-    .map((h) => `Focus more on ${h.name} (only ${h.done}/${h.total}).`);
+  const improvements = [
+    ...stats
+      .filter((h) => h.total > 0 && h.done / h.total < 0.6)
+      .map((h) => `Focus more on ${h.name} (only ${h.done}/${h.total}).`),
+    ...missTips,
+  ];
 
   return (
     <div>
