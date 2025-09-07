@@ -35,6 +35,11 @@ function weeklyKey(yyyy: string, ww: string) {
   return `${prefix}/weekly/${yyyy}-${ww}.json`;
 }
 
+function connectorKey(provider: string) {
+  const prefix = useAuth.getState().userPrefix ?? '';
+  return `${prefix}/connectors/${provider}.json`;
+}
+
 export function attachmentKey(ymd: string, uuid: string) {
   const prefix = useAuth.getState().userPrefix ?? '';
   const [yyyy, mm, dd] = ymd.split('-');
@@ -69,6 +74,8 @@ export interface WeeklyData {
   digests?: string[];
   summary?: string;
 }
+
+export type ConnectorStatus = 'added' | 'paused' | 'revoked';
 
 export async function getEntry(ymd: string): Promise<string | null> {
   const client = getClient();
@@ -206,6 +213,61 @@ export async function putSettings(data: Settings): Promise<void> {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
     if (status === 412) {
+      await clearEtag(key);
+    }
+    throw err;
+  }
+}
+
+export async function getConnectorStatus(
+  provider: string
+): Promise<ConnectorStatus | null> {
+  const client = getClient();
+  const key = connectorKey(provider);
+  const etag = await getEtag(key);
+  try {
+    const res = await client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key, IfNoneMatch: etag })
+    );
+    const body = await new Response(res.Body as ReadableStream).text();
+    if (res.ETag) await setEtag(key, res.ETag);
+    const data = JSON.parse(body) as { status: ConnectorStatus };
+    return data.status;
+  } catch (err) {
+    const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    if (status === 304) {
+      return null;
+    }
+    if (status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function putConnectorStatus(
+  provider: string,
+  status: ConnectorStatus
+): Promise<void> {
+  const client = getClient();
+  const key = connectorKey(provider);
+  const etag = await getEtag(key);
+  try {
+    const res = await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: JSON.stringify({ status }),
+        ContentType: 'application/json',
+        ...(etag ? { IfMatch: etag } : {}),
+      })
+    );
+    if (res.ETag) await setEtag(key, res.ETag);
+  } catch (err) {
+    const statusCode = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    if (statusCode === 412) {
       await clearEtag(key);
     }
     throw err;
