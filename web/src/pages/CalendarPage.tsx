@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { listMonth } from '../lib/s3Client';
+import { downloadMonthJSON, downloadMonthMarkdown } from '../lib/export';
 
 function pad(n: number) {
   return n.toString().padStart(2, '0');
@@ -30,6 +31,28 @@ export default function CalendarPage() {
         today={todayYmd}
         onSelect={(ymd) => navigate(`/date/${ymd}`)}
       />
+      <div className="mt-4 flex gap-4">
+        <button
+          className="rounded bg-blue-500 px-2 py-1 text-white"
+          onClick={() =>
+            downloadMonthJSON(String(year), pad(month)).catch((err) =>
+              console.error('export json failed', err)
+            )
+          }
+        >
+          Export JSON
+        </button>
+        <button
+          className="rounded bg-green-500 px-2 py-1 text-white"
+          onClick={() =>
+            downloadMonthMarkdown(String(year), pad(month)).catch((err) =>
+              console.error('export markdown failed', err)
+            )
+          }
+        >
+          Export Markdown
+        </button>
+      </div>
     </div>
   );
 }

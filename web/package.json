@@ -16,6 +16,7 @@
     "@aws-sdk/credential-provider-cognito-identity": "^3.883.0",
     "@aws-sdk/s3-request-presigner": "^3.883.0",
     "idb": "^8.0.3",
+    "fuse.js": "^6.6.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.8.2",
