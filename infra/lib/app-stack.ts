@@ -187,12 +187,11 @@ export class AppStack extends Stack {
     authRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ['s3:GetObject', 's3:PutObject'],
-        resources: [userBucket.arnForObjects('*')],
-        conditions: {
-          StringLike: {
-            's3:prefix': 'private/${cognito-identity.amazonaws.com:sub}/*',
-          },
-        },
+        resources: [
+          userBucket.arnForObjects(
+            'private/${cognito-identity.amazonaws.com:sub}/*'
+          ),
+        ],
       })
     );
 
