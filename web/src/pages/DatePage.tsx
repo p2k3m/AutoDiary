@@ -9,7 +9,7 @@ import {
 import { InkGauge } from '../components/InkGauge';
 import { RoutineBar, type RoutineItem } from '../components/RoutineBar';
 import { Attachments } from '../components/Attachments';
-import { getEntry, putEntry, putAttachment, getSettings } from '../lib/s3Client';
+import { getEntry, putEntry, getSettings } from '../lib/s3Client';
 
 export default function DatePage() {
   const { ymd } = useParams<{ ymd: string }>();
@@ -22,7 +22,6 @@ export default function DatePage() {
 
   const [text, setText] = useState('');
   const [routineTicks, setRoutineTicks] = useState<RoutineItem[]>([]);
-  const [files, setFiles] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<{
     name: string;
     uuid: string;
@@ -109,21 +108,6 @@ export default function DatePage() {
   );
 
   const saveEntry = useCallback(async () => {
-    const uploaded: { name: string; uuid: string }[] = [];
-    for (const file of files) {
-      const uuid = crypto.randomUUID();
-      try {
-        await putAttachment(ymdStr, uuid, file);
-        uploaded.push({ name: file.name, uuid });
-      } catch (err) {
-        console.error('Failed to upload attachment', err);
-      }
-    }
-    const allAttachments = [...attachments, ...uploaded];
-    if (uploaded.length > 0) {
-      setAttachments(allAttachments);
-      setFiles([]);
-    }
     const entry = {
       text,
       routineTicks,
@@ -131,7 +115,7 @@ export default function DatePage() {
       desc: weather?.desc,
       tmax: weather?.tmax,
       tmin: weather?.tmin,
-      attachments: allAttachments,
+      attachments,
     };
     entryRef.current = entry;
     try {
@@ -139,7 +123,7 @@ export default function DatePage() {
     } catch (err) {
       console.error('Failed to save entry', err);
     }
-  }, [files, attachments, text, routineTicks, location, weather, ymdStr]);
+  }, [attachments, text, routineTicks, location, weather, ymdStr]);
 
   const saveTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -151,7 +135,7 @@ export default function DatePage() {
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
-  }, [text, routineTicks, files, attachments, location, weather, loaded, saveEntry]);
+  }, [text, routineTicks, attachments, location, weather, loaded, saveEntry]);
 
   useEffect(() => {
     return () => {
@@ -244,9 +228,8 @@ export default function DatePage() {
       </div>
 
       <Attachments
-        files={files}
+        ymd={ymdStr}
         existing={attachments}
-        onFilesChange={setFiles}
         onExistingChange={setAttachments}
       />
 
