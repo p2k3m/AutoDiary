@@ -174,7 +174,12 @@ export default function DatePage() {
   const overflowText = lines.length > 28 ? lines.slice(28).join('\n') : '';
 
   return (
-    <div className="paper-page p-4">
+    <div className="paper-page relative p-4">
+      <InkGauge
+        used={Math.min(lines.length, 28)}
+        total={28}
+        className="absolute right-2 top-2 w-20"
+      />
       <header className="mb-4">
         <div className="text-xl font-bold">{displayDate(ymdStr)}</div>
         <div className="flex items-center gap-2 text-sm">
@@ -217,10 +222,6 @@ export default function DatePage() {
           rows={Math.max(overflowText.split('\n').length, 1)}
         />
       </details>
-
-      <div className="my-2">
-        <InkGauge used={Math.min(lines.length, 28)} total={28} />
-      </div>
 
       <Attachments
         ymd={ymdStr}
