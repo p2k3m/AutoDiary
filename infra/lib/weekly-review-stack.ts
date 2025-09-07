@@ -6,7 +6,6 @@ import {
   aws_lambda_nodejs as lambdaNodejs,
   aws_events as events,
   aws_events_targets as targets,
-  aws_ssm as ssm,
   aws_s3 as s3,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -21,12 +20,6 @@ export class WeeklyReviewStack extends Stack {
   constructor(scope: Construct, id: string, props: WeeklyReviewStackProps) {
     super(scope, id, props);
 
-    const openAiParam = ssm.StringParameter.fromStringParameterName(
-      this,
-      'OpenAIKey',
-      'openai-key'
-    );
-
     const fn = new lambdaNodejs.NodejsFunction(this, 'WeeklyReviewFunction', {
       functionName: 'weekly-review',
       entry: path.join(__dirname, '../functions/weekly-review.ts'),
@@ -35,19 +28,25 @@ export class WeeklyReviewStack extends Stack {
       timeout: Duration.minutes(15),
       environment: {
         BUCKET_NAME: props.bucket.bucketName,
-        OPENAI_KEY_PARAM: openAiParam.parameterName,
+        BEDROCK_MODEL_ID: 'anthropic.claude-v2',
+        USER_TOKEN_CAP: '10000',
+        SUMMARY_TOKEN_LIMIT: '1000',
+      },
+      bundling: {
+        externalModules: ['@aws-sdk/client-bedrock-runtime'],
       },
     });
 
     fn.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.AWS_IAM });
 
     props.bucket.grantReadWrite(fn);
-    openAiParam.grantRead(fn);
 
     fn.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['ssm:GetParameter'],
-        resources: [openAiParam.parameterArn],
+        actions: ['bedrock:InvokeModel'],
+        resources: [
+          `arn:aws:bedrock:${this.region}::foundation-model/anthropic.claude-v2`,
+        ],
       })
     );
 
