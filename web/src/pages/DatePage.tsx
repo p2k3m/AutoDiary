@@ -37,6 +37,7 @@ export default function DatePage() {
   const [attachments, setAttachments] = useState<{
     name: string;
     uuid: string;
+    ext: string;
   }[]>([]);
   const [location, setLocation] = useState<Location | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);

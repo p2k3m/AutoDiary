@@ -88,19 +88,20 @@ function normalizeEntry(body: string): string {
   }
 }
 
-export function attachmentKey(ymd: string, uuid: string) {
+export function attachmentKey(ymd: string, uuid: string, ext: string) {
   const prefix = useAuth.getState().userPrefix ?? '';
   const [yyyy, mm, dd] = ymd.split('-');
-  return `${prefix}/attachments/${yyyy}/${mm}/${dd}/${uuid}`;
+  return `${prefix}/attachments/${yyyy}/${mm}/${dd}/${uuid}.${ext}`;
 }
 
 export async function putAttachment(
   ymd: string,
   uuid: string,
+  ext: string,
   file: File
 ): Promise<void> {
   const client = getClient();
-  const key = attachmentKey(ymd, uuid);
+  const key = attachmentKey(ymd, uuid, ext);
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
