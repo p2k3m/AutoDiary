@@ -1,10 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { displayDate, formatYmd, parseYmd } from '../lib/date';
 import {
-  getDailyWeather,
-  getLocation,
-  reverseGeocode,
+  refreshWeather,
   type Location,
   type Weather,
 } from '../lib/weather';
@@ -27,6 +25,7 @@ export default function DatePage() {
   const [location, setLocation] = useState<Location | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);
   const [fetched, setFetched] = useState(false);
+  const entryRef = useRef<Record<string, unknown>>({});
 
   const handleNext = () => {
     if (ymd && ymd !== todayYmd) {
@@ -38,14 +37,30 @@ export default function DatePage() {
     }
   };
 
-  const fetchMeta = useCallback(async () => {
-    const loc = await getLocation();
-    if (!loc) return;
-    const city = await reverseGeocode(loc.lat, loc.lon);
-    const w = await getDailyWeather(loc.lat, loc.lon, ymdStr);
-    setLocation({ ...loc, city });
-    if (w) setWeather(w);
-  }, [ymdStr]);
+  const fetchMeta = useCallback(
+    async (force = false) => {
+      if (
+        !force &&
+        entryRef.current.city &&
+        entryRef.current.desc &&
+        typeof entryRef.current.city === 'string' &&
+        typeof entryRef.current.desc === 'string'
+      ) {
+        setLocation({ lat: 0, lon: 0, city: entryRef.current.city as string });
+        setWeather({
+          tmax: entryRef.current.tmax as number,
+          tmin: entryRef.current.tmin as number,
+          desc: entryRef.current.desc as string,
+        });
+        return;
+      }
+      const res = await refreshWeather(entryRef.current, ymdStr);
+      if (!res) return;
+      setLocation(res.location);
+      setWeather(res.weather);
+    },
+    [ymdStr]
+  );
 
   const handleMainChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const mainVal = e.target.value;
@@ -86,7 +101,7 @@ export default function DatePage() {
           )}
           <button
             className="text-xs underline"
-            onClick={fetchMeta}
+            onClick={() => fetchMeta(true)}
             type="button"
           >
             Refresh
