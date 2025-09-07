@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { useEffect } from 'react';
 import { useAuth } from './state/useAuth';
 import { ThemeButton } from './components/ThemeButton';
 import { OfflineBanner } from './components/OfflineBanner';
@@ -7,6 +6,7 @@ import CalendarPage from './pages/CalendarPage';
 import DatePage from './pages/DatePage';
 import SettingsPage from './pages/SettingsPage';
 import SearchPage from './pages/SearchPage';
+import LandingPage from './pages/LandingPage';
 
 function Layout() {
   return (
@@ -34,16 +34,16 @@ function Layout() {
 }
 
 export default function App() {
-  const { status, login } = useAuth();
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      login();
-    }
-  }, [status, login]);
+  const { status } = useAuth();
 
   if (status !== 'authenticated') {
-    return null;
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="*" element={<LandingPage />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
   return (

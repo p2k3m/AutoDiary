@@ -9,7 +9,7 @@ interface AuthState {
   /** per-user prefix derived from the id token */
   userPrefix?: string;
   /** redirect the browser to the Cognito Hosted UI */
-  login: () => void;
+  login: (identityProvider?: string) => void;
   /** clear stored tokens and re-authenticate */
   logout: () => void;
 }
@@ -30,10 +30,13 @@ const redirectUri = typeof window !== 'undefined' ? window.location.origin : '';
 
 export const useAuth = create<AuthState>((set) => ({
   status: 'loading',
-  login: () => {
+  login: (identityProvider) => {
     const url =
       `https://${hostedUiDomain}/login?` +
-      `client_id=${clientId}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      `client_id=${clientId}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      (identityProvider
+        ? `&identity_provider=${encodeURIComponent(identityProvider)}`
+        : '');
     window.location.assign(url);
   },
   logout: () => {
