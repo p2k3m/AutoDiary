@@ -267,19 +267,23 @@ export function WeeklyReview() {
           );
         })}
       </ul>
-      {extra?.summary && (
+      {extra?.aiSummary && (
         <div className="mb-4">
           <h3 className="font-semibold">AI Summary</h3>
-          <p>{extra.summary}</p>
+          <p>{extra.aiSummary}</p>
         </div>
       )}
-      {extra?.digests && extra.digests.length > 0 && (
+      {extra?.connectorsDigest && (
         <div className="mb-4">
           <h3 className="font-semibold">Connector Digests</h3>
           <ul className="list-disc pl-4">
-            {extra.digests.map((d, i) => (
-              <li key={i}>{d}</li>
-            ))}
+            <li>Meetings hours: {extra.connectorsDigest.meetingsHours}</li>
+            {extra.connectorsDigest.topContacts.length > 0 && (
+              <li>
+                Top contacts: {extra.connectorsDigest.topContacts.join(', ')}
+              </li>
+            )}
+            <li>Photos count: {extra.connectorsDigest.photosCount}</li>
           </ul>
         </div>
       )}
