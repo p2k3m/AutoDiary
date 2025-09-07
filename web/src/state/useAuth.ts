@@ -67,7 +67,7 @@ async function init() {
   });
 
   const payload = decodeJwt<{ sub: string }>(idToken);
-  const userPrefix = payload.sub;
+  const userPrefix = `private/${payload.sub}`;
 
   useAuth.setState({
     status: 'authenticated',
