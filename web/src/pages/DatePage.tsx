@@ -9,7 +9,7 @@ import {
 import { InkGauge } from '../components/InkGauge';
 import { RoutineBar, type RoutineItem } from '../components/RoutineBar';
 import { Attachments } from '../components/Attachments';
-import { getEntry, putEntry, putAttachment } from '../lib/s3Client';
+import { getEntry, putEntry, putAttachment, getSettings } from '../lib/s3Client';
 
 export default function DatePage() {
   const { ymd } = useParams<{ ymd: string }>();
@@ -21,7 +21,7 @@ export default function DatePage() {
   const ymdStr = ymd || todayYmd;
 
   const [text, setText] = useState('');
-  const [routines, setRoutines] = useState<RoutineItem[]>([]);
+  const [routineTicks, setRoutineTicks] = useState<RoutineItem[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<{
     name: string;
@@ -40,7 +40,7 @@ export default function DatePage() {
         const entry = JSON.parse(raw);
         entryRef.current = entry;
         setText(entry.text ?? '');
-        setRoutines(entry.routines ?? []);
+        setRoutineTicks(entry.routineTicks ?? entry.routines ?? []);
         if (entry.city) {
           setLocation({ lat: 0, lon: 0, city: entry.city as string });
         }
@@ -52,6 +52,12 @@ export default function DatePage() {
           });
         }
         setAttachments(entry.attachments ?? []);
+      } else {
+        const settings = await getSettings();
+        const ticks =
+          settings?.routineTemplate?.map((r) => ({ text: r.text, done: false })) ?? [];
+        setRoutineTicks(ticks);
+        entryRef.current = { routineTicks: ticks };
       }
     } catch (err) {
       console.error('Failed to load entry', err);
@@ -120,7 +126,7 @@ export default function DatePage() {
     }
     const entry = {
       text,
-      routines,
+      routineTicks,
       city: location?.city,
       desc: weather?.desc,
       tmax: weather?.tmax,
@@ -133,9 +139,9 @@ export default function DatePage() {
     } catch (err) {
       console.error('Failed to save entry', err);
     }
-  }, [files, attachments, text, routines, location, weather, ymdStr]);
+  }, [files, attachments, text, routineTicks, location, weather, ymdStr]);
 
-  const saveTimer = useRef<number>();
+  const saveTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (!loaded) return;
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -145,7 +151,7 @@ export default function DatePage() {
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
-  }, [text, routines, files, attachments, location, weather, loaded, saveEntry]);
+  }, [text, routineTicks, files, attachments, location, weather, loaded, saveEntry]);
 
   useEffect(() => {
     return () => {
@@ -210,7 +216,11 @@ export default function DatePage() {
         </div>
       </header>
 
-      <RoutineBar items={routines} onChange={setRoutines} />
+      <RoutineBar
+        items={routineTicks}
+        onChange={setRoutineTicks}
+        editable={ymdStr === todayYmd}
+      />
 
       <textarea
         rows={28}
