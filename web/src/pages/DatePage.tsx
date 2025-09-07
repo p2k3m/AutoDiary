@@ -213,8 +213,13 @@ export default function DatePage() {
         onChange={handleMainChange}
       />
 
-      <details className="mt-2" open={Boolean(overflowText)}>
-        <summary>Overflow</summary>
+      <details
+        className="mt-2 rounded border border-gray-300 bg-gray-50 p-2"
+        open={Boolean(overflowText)}
+      >
+        <summary className="cursor-pointer select-none font-medium">
+          Back of Page
+        </summary>
         <textarea
           className="handwriting mt-2 w-full resize-none bg-transparent outline-none"
           value={overflowText}
