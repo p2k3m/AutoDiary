@@ -39,6 +39,8 @@ export class WeeklyReviewStack extends Stack {
       },
     });
 
+    fn.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.AWS_IAM });
+
     props.bucket.grantReadWrite(fn);
     openAiParam.grantRead(fn);
 
@@ -50,7 +52,7 @@ export class WeeklyReviewStack extends Stack {
     );
 
     const rule = new events.Rule(this, 'WeeklyReviewSchedule', {
-      schedule: events.Schedule.cron({ weekDay: 'MON', hour: '0', minute: '0' }),
+      schedule: events.Schedule.cron({ weekDay: 'SUN', hour: '19', minute: '0' }),
     });
 
     rule.addTarget(new targets.LambdaFunction(fn));
