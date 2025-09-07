@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getEntry, putEntry, getSettings } from '../lib/s3Client';
+import { encrypt, decrypt } from '../lib/crypto';
 import { formatYmd } from '../lib/date';
 import type { RoutineItem } from '../components/RoutineBar';
 
@@ -30,9 +31,11 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   loadEntry: async (ymd) => {
     if (get().entries[ymd]) return;
     try {
+      const settings = await getSettings();
       const raw = await getEntry(ymd);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const body = raw && settings?.e2ee ? decrypt(raw) : raw;
+      if (body) {
+        const parsed = JSON.parse(body) as Record<string, unknown>;
         const loc =
           (parsed.loc as DiaryEntry['loc']) ||
           (parsed.city
@@ -58,7 +61,6 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         };
         set((state) => ({ entries: { ...state.entries, [ymd]: entry } }));
       } else {
-        const settings = await getSettings();
         const routineTicks =
           settings?.routineTemplate?.map((r) => ({ text: r.text, done: false })) ?? [];
         const entry: DiaryEntry = { text: '', routineTicks, attachments: [], inkUsed: 0 };
@@ -71,14 +73,20 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   saveEntry: async (ymd) => {
     const entry = get().entries[ymd];
     if (!entry) return;
+    const settings = await getSettings();
     try {
-      await putEntry(ymd, JSON.stringify(entry));
+      await putEntry(
+        ymd,
+        settings?.e2ee ? encrypt(JSON.stringify(entry)) : JSON.stringify(entry)
+      );
     } catch (err) {
       const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
       if (status === 412) {
         try {
           const latestRaw = await getEntry(ymd);
-          const latest = latestRaw ? JSON.parse(latestRaw) : {};
+          const latestBody =
+            latestRaw && settings?.e2ee ? decrypt(latestRaw) : latestRaw;
+          const latest = latestBody ? JSON.parse(latestBody) : {};
           const remoteText = (latest as { text?: string }).text ?? '';
           const localText = entry.text ?? '';
           let resolved: DiaryEntry = entry;
@@ -93,7 +101,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
             resolved = { ...latest, ...entry };
           }
           set((state) => ({ entries: { ...state.entries, [ymd]: resolved } }));
-          await putEntry(ymd, JSON.stringify(resolved));
+          await putEntry(
+            ymd,
+            settings?.e2ee
+              ? encrypt(JSON.stringify(resolved))
+              : JSON.stringify(resolved)
+          );
         } catch (e) {
           console.error('Failed to resolve entry conflict', e);
         }
