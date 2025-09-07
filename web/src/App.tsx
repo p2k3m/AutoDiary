@@ -7,6 +7,7 @@ import DatePage from './pages/DatePage';
 import SettingsPage from './pages/SettingsPage';
 import SearchPage from './pages/SearchPage';
 import LandingPage from './pages/LandingPage';
+import WeeklyReviewPage from './pages/WeeklyReviewPage';
 
 function Layout() {
   return (
@@ -16,6 +17,7 @@ function Layout() {
         <nav className="flex gap-4">
           <Link to="/calendar">Calendar</Link>
           <Link to="/search">Search</Link>
+          <Link to="/weekly">Weekly Review</Link>
           <Link to="/settings">Settings</Link>
         </nav>
         <ThemeButton />
@@ -25,8 +27,9 @@ function Layout() {
           <Route path="/" element={<Navigate to="/calendar" replace />} />
           <Route path="/calendar/:yyyy?/:mm?" element={<CalendarPage />} />
           <Route path="/date/:ymd" element={<DatePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/weekly" element={<WeeklyReviewPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
     </div>
