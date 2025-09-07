@@ -29,9 +29,21 @@ const entryDbPromise = openDB(ENTRY_DB, 1, {
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(APP_SHELL_CACHE).then((cache) =>
-      cache.addAll(['/', '/index.html', '/manifest.json'])
-    )
+    (async () => {
+      const cache = await caches.open(APP_SHELL_CACHE);
+      const assets: string[] = [];
+      try {
+        const res = await fetch('/index.html');
+        const html = await res.text();
+        const matches = html.match(/\/assets\/[^"']+\.(?:js|css)/g);
+        if (matches) {
+          assets.push(...matches);
+        }
+      } catch {
+        // ignore failures to fetch index or parse assets
+      }
+      await cache.addAll(['/', '/index.html', '/manifest.json', ...new Set(assets)]);
+    })()
   );
 });
 
@@ -69,6 +81,23 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => caches.match('/index.html') as Promise<Response>);
+      })
+    );
+    return;
+  }
+
+  if (
+    req.method === 'GET' &&
+    (req.destination === 'script' || req.destination === 'style')
+  ) {
+    event.respondWith(
+      caches.match(req).then((res) => {
+        if (res) return res;
+        return fetch(req).then((response) => {
+          const copy = response.clone();
+          caches.open(APP_SHELL_CACHE).then((cache) => cache.put(req, copy));
+          return response;
+        });
       })
     );
     return;
