@@ -13,13 +13,23 @@ export function parseYmd(ymd: string): Date {
   return new Date(y, m - 1, day);
 }
 
-/** Human friendly date like 'Monday, January 1, 2024' */
+/** Human friendly date like 'Mon, 08 Sep 2025' */
 export function displayDate(ymd: string): string {
   const d = parseYmd(ymd);
-  return d.toLocaleDateString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return `${weekdays[d.getDay()]}, ${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
