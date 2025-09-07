@@ -73,6 +73,12 @@ export class AppStack extends Stack {
       target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
     });
 
+    new r53.AaaaRecord(this, 'AliasAAAA', {
+      zone,
+      recordName: props.domain,
+      target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
+    });
+
     const userPool = new cognito.UserPool(this, 'UserPool', {
       selfSignUpEnabled: false,
     });
