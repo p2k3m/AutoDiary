@@ -179,11 +179,9 @@ export default function DatePage() {
         <div className="text-xl font-bold">{displayDate(ymdStr)}</div>
         <div className="flex items-center gap-2 text-sm">
           {location?.city && <span>{location.city}</span>}
-          {weather && (
-            <span>
-              {weather.desc} {weather.tmin}–{weather.tmax}°C
-            </span>
-          )}
+          {location?.city && weather && <span>•</span>}
+          {weather && <span>{weather.tmax}°C {weather.desc}</span>}
+          {(location?.city || weather) && <span>•</span>}
           <button
             className="text-xs underline"
             onClick={() => fetchMeta(true)}
