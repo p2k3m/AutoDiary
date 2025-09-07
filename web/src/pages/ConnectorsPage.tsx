@@ -6,10 +6,26 @@ import {
 } from '../lib/s3Client';
 
 const providers = [
-  { key: 'gmail', name: 'Gmail' },
-  { key: 'google-calendar', name: 'Google Calendar' },
-  { key: 'google-photos', name: 'Google Photos' },
-  { key: 'linkedin', name: 'LinkedIn' },
+  {
+    key: 'gmail',
+    name: 'Gmail',
+    scope: 'read starred email subjects',
+  },
+  {
+    key: 'google-calendar',
+    name: 'Google Calendar',
+    scope: 'read event summaries',
+  },
+  {
+    key: 'google-photos',
+    name: 'Google Photos',
+    scope: 'read photo metadata',
+  },
+  {
+    key: 'linkedin',
+    name: 'LinkedIn',
+    scope: 'read post headlines',
+  },
 ] as const;
 
 export default function ConnectorsPage() {
@@ -43,7 +59,10 @@ export default function ConnectorsPage() {
       <ul className="space-y-4">
         {providers.map((p) => (
           <li key={p.key} className="flex items-center justify-between gap-4">
-            <span className="font-medium">{p.name}</span>
+            <div className="flex flex-col">
+              <span className="font-medium">{p.name}</span>
+              <span className="text-xs text-gray-500">{p.scope}</span>
+            </div>
             <span className="text-sm">
               Status: {statuses[p.key] ?? 'unknown'}
             </span>
