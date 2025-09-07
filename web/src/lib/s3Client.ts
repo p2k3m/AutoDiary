@@ -23,6 +23,18 @@ function entryKey(ymd: string) {
   return `${prefix}/${ymd}.json`;
 }
 
+function settingsKey() {
+  const prefix = useAuth.getState().userPrefix ?? '';
+  return `${prefix}/settings.json`;
+}
+
+export interface Settings {
+  theme: 'light' | 'dark' | 'paper';
+  routineTemplate: { text: string; done: boolean }[];
+  timezone: string;
+  e2ee: boolean;
+}
+
 export async function getEntry(ymd: string): Promise<string | null> {
   const client = getClient();
   const key = entryKey(ymd);
@@ -71,5 +83,43 @@ export async function listMonth(yyyy: string, mm: string): Promise<string[]> {
       .filter((k) => k)
       .map((k) => k.slice(prefix.length + 1).replace(/\.json$/, '')) ?? []
   );
+}
+
+export async function getSettings(): Promise<Settings | null> {
+  const client = getClient();
+  const key = settingsKey();
+  const etag = await getEtag(key);
+  try {
+    const res = await client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key, IfNoneMatch: etag })
+    );
+    const body = await new Response(res.Body as ReadableStream).text();
+    if (res.ETag) await setEtag(key, res.ETag);
+    return JSON.parse(body) as Settings;
+  } catch (err) {
+    const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    if (status === 304) {
+      return null;
+    }
+    if (status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function putSettings(data: Settings): Promise<void> {
+  const client = getClient();
+  const key = settingsKey();
+  const res = await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: JSON.stringify(data),
+      ContentType: 'application/json',
+    })
+  );
+  if (res.ETag) await setEtag(key, res.ETag);
 }
 
