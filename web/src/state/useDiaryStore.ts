@@ -9,6 +9,7 @@ interface DiaryEntry {
   attachments: { name: string; uuid: string }[];
   loc?: { lat?: number; lon?: number; city?: string };
   weather?: { tmax?: number; tmin?: number; desc?: string };
+  inkUsed: number;
 }
 
 interface DiaryState {
@@ -46,19 +47,21 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
                 tmin: parsed.tmin as number | undefined,
               } as DiaryEntry['weather'])
             : undefined);
+        const text = (parsed.text as string) ?? '';
         const entry: DiaryEntry = {
-          text: (parsed.text as string) ?? '',
+          text,
           routineTicks: (parsed.routineTicks as RoutineItem[]) ?? parsed.routines ?? [],
           attachments: (parsed.attachments as { name: string; uuid: string }[]) ?? [],
           loc,
           weather,
+          inkUsed: (parsed.inkUsed as number) ?? text.length,
         };
         set((state) => ({ entries: { ...state.entries, [ymd]: entry } }));
       } else {
         const settings = await getSettings();
         const routineTicks =
           settings?.routineTemplate?.map((r) => ({ text: r.text, done: false })) ?? [];
-        const entry: DiaryEntry = { text: '', routineTicks, attachments: [] };
+        const entry: DiaryEntry = { text: '', routineTicks, attachments: [], inkUsed: 0 };
         set((state) => ({ entries: { ...state.entries, [ymd]: entry } }));
       }
     } catch (err) {
