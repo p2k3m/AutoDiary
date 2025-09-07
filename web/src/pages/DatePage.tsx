@@ -47,16 +47,8 @@ export default function DatePage() {
     setText(entry?.text ?? '');
     setRoutineTicks(entry?.routineTicks ?? []);
     setAttachments(entry?.attachments ?? []);
-    if (entry?.city) {
-      setLocation({ lat: 0, lon: 0, city: entry.city });
-    }
-    if (entry?.desc) {
-      setWeather({
-        tmax: entry.tmax as number,
-        tmin: entry.tmin as number,
-        desc: entry.desc as string,
-      });
-    }
+    setLocation(entry?.loc ?? null);
+    setWeather(entry?.weather ?? null);
     setLoaded(true);
   }, [ymdStr, loadEntryFromStore]);
 
@@ -86,29 +78,20 @@ export default function DatePage() {
       const current = useDiaryStore.getState().entries[ymdStr] || {};
       if (
         !force &&
-        current.city &&
-        current.desc &&
-        typeof current.city === 'string' &&
-        typeof current.desc === 'string'
+        current.loc?.city &&
+        current.weather?.desc &&
+        typeof current.loc.city === 'string' &&
+        typeof current.weather.desc === 'string'
       ) {
-        setLocation({ lat: 0, lon: 0, city: current.city });
-        setWeather({
-          tmax: current.tmax as number,
-          tmin: current.tmin as number,
-          desc: current.desc as string,
-        });
+        setLocation(current.loc);
+        setWeather(current.weather);
         return;
       }
       const res = await refreshWeather(current, ymdStr);
       if (!res) return;
       setLocation(res.location);
       setWeather(res.weather);
-      updateEntry(ymdStr, {
-        city: res.location.city,
-        desc: res.weather.desc,
-        tmax: res.weather.tmax,
-        tmin: res.weather.tmin,
-      });
+      updateEntry(ymdStr, { loc: res.location, weather: res.weather });
     },
     [ymdStr, updateEntry]
   );
@@ -181,14 +164,12 @@ export default function DatePage() {
         className="absolute right-2 top-2 w-20"
       />
       <header className="mb-4">
-        <div className="text-xl font-bold">{displayDate(ymdStr)}</div>
-        <div className="flex items-center gap-2 text-sm">
-          {location?.city && <span>{location.city}</span>}
-          {location?.city && weather && <span>•</span>}
-          {weather && <span>{weather.tmax}°C {weather.desc}</span>}
-          {(location?.city || weather) && <span>•</span>}
+        <div className="flex items-center gap-2 text-xl font-bold">
+          <span>{displayDate(ymdStr)}</span>
+          {location?.city && <span>• {location.city}</span>}
+          {weather && <span>• {weather.tmax}°C, {weather.desc}</span>}
           <button
-            className="text-xs underline"
+            className="text-xs font-normal underline"
             onClick={() => fetchMeta(true)}
             type="button"
           >

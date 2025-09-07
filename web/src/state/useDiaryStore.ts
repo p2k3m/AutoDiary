@@ -7,10 +7,8 @@ interface DiaryEntry {
   text: string;
   routineTicks: RoutineItem[];
   attachments: { name: string; uuid: string }[];
-  city?: string;
-  desc?: string;
-  tmax?: number;
-  tmin?: number;
+  loc?: { lat?: number; lon?: number; city?: string };
+  weather?: { tmax?: number; tmin?: number; desc?: string };
 }
 
 interface DiaryState {
@@ -34,14 +32,26 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       const raw = await getEntry(ymd);
       if (raw) {
         const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const loc =
+          (parsed.loc as DiaryEntry['loc']) ||
+          (parsed.city
+            ? ({ city: parsed.city as string } as DiaryEntry['loc'])
+            : undefined);
+        const weather =
+          (parsed.weather as DiaryEntry['weather']) ||
+          (parsed.desc || parsed.tmax || parsed.tmin
+            ? ({
+                desc: parsed.desc as string | undefined,
+                tmax: parsed.tmax as number | undefined,
+                tmin: parsed.tmin as number | undefined,
+              } as DiaryEntry['weather'])
+            : undefined);
         const entry: DiaryEntry = {
-          text: parsed.text ?? '',
-          routineTicks: parsed.routineTicks ?? parsed.routines ?? [],
-          attachments: parsed.attachments ?? [],
-          city: parsed.city,
-          desc: parsed.desc,
-          tmax: parsed.tmax,
-          tmin: parsed.tmin,
+          text: (parsed.text as string) ?? '',
+          routineTicks: (parsed.routineTicks as RoutineItem[]) ?? parsed.routines ?? [],
+          attachments: (parsed.attachments as { name: string; uuid: string }[]) ?? [],
+          loc,
+          weather,
         };
         set((state) => ({ entries: { ...state.entries, [ymd]: entry } }));
       } else {

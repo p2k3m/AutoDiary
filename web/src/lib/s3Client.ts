@@ -40,6 +40,49 @@ function connectorKey(provider: string) {
   return `${prefix}/connectors/${provider}.json`;
 }
 
+interface RawEntry {
+  loc?: { lat?: number; lon?: number; city?: string };
+  weather?: { tmax?: number; tmin?: number; desc?: string };
+  city?: string;
+  lat?: number;
+  lon?: number;
+  tmax?: number;
+  tmin?: number;
+  desc?: string;
+  [key: string]: unknown;
+}
+
+function normalizeEntry(body: string): string {
+  try {
+    const data: RawEntry = JSON.parse(body);
+    const loc =
+      data.loc ||
+      (data.city || data.lat || data.lon
+        ? { lat: data.lat, lon: data.lon, city: data.city }
+        : undefined);
+    const weather =
+      data.weather ||
+      (data.tmax || data.tmin || data.desc
+        ? { tmax: data.tmax, tmin: data.tmin, desc: data.desc }
+        : undefined);
+    if (loc) {
+      data.loc = loc;
+      delete data.city;
+      delete data.lat;
+      delete data.lon;
+    }
+    if (weather) {
+      data.weather = weather;
+      delete data.tmax;
+      delete data.tmin;
+      delete data.desc;
+    }
+    return JSON.stringify(data);
+  } catch {
+    return body;
+  }
+}
+
 export function attachmentKey(ymd: string, uuid: string) {
   const prefix = useAuth.getState().userPrefix ?? '';
   const [yyyy, mm, dd] = ymd.split('-');
@@ -85,7 +128,8 @@ export async function getEntry(ymd: string): Promise<string | null> {
     const res = await client.send(
       new GetObjectCommand({ Bucket: bucket, Key: key, IfNoneMatch: etag })
     );
-    const body = await new Response(res.Body as ReadableStream).text();
+    const raw = await new Response(res.Body as ReadableStream).text();
+    const body = normalizeEntry(raw);
     if (res.ETag) await setEtag(key, res.ETag);
     await cacheEntry(ymd, body);
     return body;
@@ -93,13 +137,13 @@ export async function getEntry(ymd: string): Promise<string | null> {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
     if (status === 304) {
       const cached = await getCachedEntry(ymd);
-      return cached ?? null;
+      return cached ? normalizeEntry(cached) : null;
     }
     if (status === 404) {
       return null;
     }
     const cached = await getCachedEntry(ymd);
-    if (cached) return cached;
+    if (cached) return normalizeEntry(cached);
     throw err;
   }
 }
@@ -108,18 +152,19 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
   const client = getClient();
   const key = entryKey(ymd);
   const etag = await getEtag(key);
+  const normalized = normalizeEntry(body);
   try {
     const res = await client.send(
       new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        Body: body,
+        Body: normalized,
         ContentType: 'application/json',
         ...(etag ? { IfMatch: etag } : {}),
       })
     );
     if (res.ETag) await setEtag(key, res.ETag);
-    await cacheEntry(ymd, body);
+    await cacheEntry(ymd, normalized);
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
