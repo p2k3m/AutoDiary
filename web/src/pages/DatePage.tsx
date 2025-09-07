@@ -171,8 +171,9 @@ export default function DatePage() {
             className="text-xs font-normal underline"
             onClick={() => fetchMeta(true)}
             type="button"
+            aria-label="Refresh weather"
           >
-            Refresh
+            Refresh weather
           </button>
         </div>
       </header>
