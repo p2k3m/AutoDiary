@@ -9,7 +9,7 @@ import {
 import { InkGauge } from '../components/InkGauge';
 import { RoutineBar, type RoutineItem } from '../components/RoutineBar';
 import { Attachments } from '../components/Attachments';
-import { getEntry, putEntry, getSettings } from '../lib/s3Client';
+import { useDiaryStore } from '../state/useDiaryStore';
 
 export default function DatePage() {
   const { ymd } = useParams<{ ymd: string }>();
@@ -17,8 +17,18 @@ export default function DatePage() {
 
   const today = new Date();
   const todayYmd = formatYmd(today);
-  const current = ymd ? parseYmd(ymd) : today;
-  const ymdStr = ymd || todayYmd;
+
+  const currentDate = useDiaryStore((s) => s.currentDate);
+  const setCurrentDate = useDiaryStore((s) => s.setCurrentDate);
+  const loadEntryFromStore = useDiaryStore((s) => s.loadEntry);
+  const saveEntryToStore = useDiaryStore((s) => s.saveEntry);
+  const updateEntry = useDiaryStore((s) => s.updateEntry);
+
+  useEffect(() => {
+    if (ymd) setCurrentDate(ymd);
+  }, [ymd, setCurrentDate]);
+
+  const ymdStr = currentDate;
 
   const [text, setText] = useState('');
   const [routineTicks, setRoutineTicks] = useState<RoutineItem[]>([]);
@@ -30,127 +40,82 @@ export default function DatePage() {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [fetched, setFetched] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const entryRef = useRef<Record<string, unknown>>({});
 
   const loadEntry = useCallback(async () => {
-    try {
-      const raw = await getEntry(ymdStr);
-      if (raw) {
-        const entry = JSON.parse(raw);
-        entryRef.current = entry;
-        setText(entry.text ?? '');
-        setRoutineTicks(entry.routineTicks ?? entry.routines ?? []);
-        if (entry.city) {
-          setLocation({ lat: 0, lon: 0, city: entry.city as string });
-        }
-        if (entry.desc) {
-          setWeather({
-            tmax: entry.tmax as number,
-            tmin: entry.tmin as number,
-            desc: entry.desc as string,
-          });
-        }
-        setAttachments(entry.attachments ?? []);
-      } else {
-        const settings = await getSettings();
-        const ticks =
-          settings?.routineTemplate?.map((r) => ({ text: r.text, done: false })) ?? [];
-        setRoutineTicks(ticks);
-        entryRef.current = { routineTicks: ticks };
-      }
-    } catch (err) {
-      console.error('Failed to load entry', err);
-    } finally {
-      setLoaded(true);
+    await loadEntryFromStore(ymdStr);
+    const entry = useDiaryStore.getState().entries[ymdStr];
+    setText(entry?.text ?? '');
+    setRoutineTicks(entry?.routineTicks ?? []);
+    setAttachments(entry?.attachments ?? []);
+    if (entry?.city) {
+      setLocation({ lat: 0, lon: 0, city: entry.city });
     }
-  }, [ymdStr]);
+    if (entry?.desc) {
+      setWeather({
+        tmax: entry.tmax as number,
+        tmin: entry.tmin as number,
+        desc: entry.desc as string,
+      });
+    }
+    setLoaded(true);
+  }, [ymdStr, loadEntryFromStore]);
 
   useEffect(() => {
+    setLoaded(false);
     void loadEntry();
   }, [loadEntry]);
 
   const handleNext = () => {
     void (async () => {
       await saveEntry();
-      if (ymd && ymd !== todayYmd) {
+      if (ymdStr !== todayYmd) {
+        setCurrentDate(todayYmd);
         navigate(`/date/${todayYmd}`);
       } else {
-        const next = new Date(current);
-        next.setDate(current.getDate() + 1);
-        navigate(`/date/${formatYmd(next)}`);
+        const next = parseYmd(ymdStr);
+        next.setDate(next.getDate() + 1);
+        const nextYmd = formatYmd(next);
+        setCurrentDate(nextYmd);
+        navigate(`/date/${nextYmd}`);
       }
     })();
   };
 
   const fetchMeta = useCallback(
     async (force = false) => {
+      const current = useDiaryStore.getState().entries[ymdStr] || {};
       if (
         !force &&
-        entryRef.current.city &&
-        entryRef.current.desc &&
-        typeof entryRef.current.city === 'string' &&
-        typeof entryRef.current.desc === 'string'
+        current.city &&
+        current.desc &&
+        typeof current.city === 'string' &&
+        typeof current.desc === 'string'
       ) {
-        setLocation({ lat: 0, lon: 0, city: entryRef.current.city as string });
+        setLocation({ lat: 0, lon: 0, city: current.city });
         setWeather({
-          tmax: entryRef.current.tmax as number,
-          tmin: entryRef.current.tmin as number,
-          desc: entryRef.current.desc as string,
+          tmax: current.tmax as number,
+          tmin: current.tmin as number,
+          desc: current.desc as string,
         });
         return;
       }
-      const res = await refreshWeather(entryRef.current, ymdStr);
+      const res = await refreshWeather(current, ymdStr);
       if (!res) return;
       setLocation(res.location);
       setWeather(res.weather);
+      updateEntry(ymdStr, {
+        city: res.location.city,
+        desc: res.weather.desc,
+        tmax: res.weather.tmax,
+        tmin: res.weather.tmin,
+      });
     },
-    [ymdStr]
+    [ymdStr, updateEntry]
   );
 
   const saveEntry = useCallback(async () => {
-    const entry = {
-      text,
-      routineTicks,
-      city: location?.city,
-      desc: weather?.desc,
-      tmax: weather?.tmax,
-      tmin: weather?.tmin,
-      attachments,
-    };
-    entryRef.current = entry;
-    try {
-      await putEntry(ymdStr, JSON.stringify(entry));
-    } catch (err) {
-      const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
-        ?.httpStatusCode;
-      if (status === 412) {
-        try {
-          const latestRaw = await getEntry(ymdStr);
-          const latest = latestRaw ? JSON.parse(latestRaw) : {};
-          const remoteText = (latest as { text?: string }).text ?? '';
-          const localText = entry.text ?? '';
-          let resolved = entry;
-          if (remoteText !== localText) {
-            const merge = window.confirm(
-              `Entry has changed elsewhere.\n\nRemote:\n${remoteText}\n\nLocal:\n${localText}\n\nPress OK to merge or Cancel to overwrite.`
-            );
-            resolved = merge
-              ? { ...latest, ...entry, text: `${remoteText}\n${localText}` }
-              : { ...latest, ...entry };
-          } else {
-            resolved = { ...latest, ...entry };
-          }
-          entryRef.current = resolved;
-          setText(resolved.text ?? '');
-          await putEntry(ymdStr, JSON.stringify(resolved));
-        } catch (e) {
-          console.error('Failed to resolve entry conflict', e);
-        }
-      } else {
-        console.error('Failed to save entry', err);
-      }
-    }
-  }, [attachments, text, routineTicks, location, weather, ymdStr]);
+    await saveEntryToStore(ymdStr);
+  }, [saveEntryToStore, ymdStr]);
 
   const saveTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -185,6 +150,7 @@ export default function DatePage() {
     const over = text.split('\n').slice(28).join('\n');
     const newText = over ? `${mainVal}\n${over}` : mainVal;
     setText(newText);
+    updateEntry(ymdStr, { text: newText });
     if (!fetched && newText.trim() !== '') {
       setFetched(true);
       fetchMeta();
@@ -196,6 +162,7 @@ export default function DatePage() {
     const mainPart = text.split('\n').slice(0, 28).join('\n');
     const newText = overVal ? `${mainPart}\n${overVal}` : mainPart;
     setText(newText);
+    updateEntry(ymdStr, { text: newText });
     if (!fetched && newText.trim() !== '') {
       setFetched(true);
       fetchMeta();
@@ -229,7 +196,10 @@ export default function DatePage() {
 
       <RoutineBar
         items={routineTicks}
-        onChange={setRoutineTicks}
+        onChange={(items) => {
+          setRoutineTicks(items);
+          updateEntry(ymdStr, { routineTicks: items });
+        }}
         editable={ymdStr === todayYmd}
       />
 
@@ -257,7 +227,10 @@ export default function DatePage() {
       <Attachments
         ymd={ymdStr}
         existing={attachments}
-        onExistingChange={setAttachments}
+        onExistingChange={(atts) => {
+          setAttachments(atts);
+          updateEntry(ymdStr, { attachments: atts });
+        }}
       />
 
       <button
