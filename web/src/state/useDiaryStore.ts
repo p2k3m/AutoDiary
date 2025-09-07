@@ -7,7 +7,7 @@ import type { RoutineItem } from '../components/RoutineBar';
 interface DiaryEntry {
   text: string;
   routineTicks: RoutineItem[];
-  attachments: { name: string; uuid: string }[];
+  attachments: { name: string; uuid: string; ext: string }[];
   loc?: { lat?: number; lon?: number; city?: string };
   weather?: { tmax?: number; tmin?: number; desc?: string };
   inkUsed: number;
@@ -54,7 +54,14 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         const entry: DiaryEntry = {
           text,
           routineTicks: (parsed.routineTicks as RoutineItem[]) ?? parsed.routines ?? [],
-          attachments: (parsed.attachments as { name: string; uuid: string }[]) ?? [],
+          attachments:
+            ((parsed.attachments as { name: string; uuid: string; ext?: string }[]) ?? []).map(
+              (a) => ({
+                name: a.name,
+                uuid: a.uuid,
+                ext: a.ext || a.name.split('.').pop()?.toLowerCase() || '',
+              })
+            ),
           loc,
           weather,
           inkUsed: (parsed.inkUsed as number) ?? text.length,

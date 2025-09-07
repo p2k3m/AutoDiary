@@ -12,6 +12,7 @@ import { attachmentKey } from '../lib/s3Client';
 interface AttachmentMeta {
   name: string;
   uuid: string;
+  ext: string;
 }
 
 interface AttachmentsProps {
@@ -40,7 +41,8 @@ export function Attachments({
     const loadUrls = async () => {
       const entries = await Promise.all(
         existing.map(async (item) => {
-          const key = attachmentKey(ymd, item.uuid);
+          const ext = item.ext || item.name.split('.').pop()?.toLowerCase() || '';
+          const key = attachmentKey(ymd, item.uuid, ext);
           const url = await getSignedUrl(
             client,
             new GetObjectCommand({ Bucket: bucket, Key: key }),
@@ -59,7 +61,8 @@ export function Attachments({
     const urlMap: Record<string, string> = {};
     for (const file of list) {
       const uuid = crypto.randomUUID();
-      const key = attachmentKey(ymd, uuid);
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      const key = attachmentKey(ymd, uuid, ext);
       await client.send(
         new PutObjectCommand({
           Bucket: bucket,
@@ -74,7 +77,7 @@ export function Attachments({
         new GetObjectCommand({ Bucket: bucket, Key: key }),
         { expiresIn: 3600 }
       );
-      added.push({ name: file.name, uuid });
+      added.push({ name: file.name, uuid, ext });
       urlMap[uuid] = url;
     }
     if (added.length > 0) {
