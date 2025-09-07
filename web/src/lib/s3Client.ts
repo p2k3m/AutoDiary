@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { useAuth } from '../state/useAuth';
 import { getEtag, setEtag, clearEtag } from './etagCache';
+import { cacheEntry, getCachedEntry } from './entryCache';
 
 const region = import.meta.env.VITE_REGION as string;
 const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
@@ -79,15 +80,19 @@ export async function getEntry(ymd: string): Promise<string | null> {
     );
     const body = await new Response(res.Body as ReadableStream).text();
     if (res.ETag) await setEtag(key, res.ETag);
+    await cacheEntry(ymd, body);
     return body;
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
     if (status === 304) {
-      return null;
+      const cached = await getCachedEntry(ymd);
+      return cached ?? null;
     }
     if (status === 404) {
       return null;
     }
+    const cached = await getCachedEntry(ymd);
+    if (cached) return cached;
     throw err;
   }
 }
@@ -107,6 +112,7 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
       })
     );
     if (res.ETag) await setEtag(key, res.ETag);
+    await cacheEntry(ymd, body);
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
