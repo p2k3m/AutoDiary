@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import pLimit from 'p-limit';
 import { getEntry, getWeekly, type WeeklyData } from '../lib/s3Client';
 import { formatYmd } from '../lib/date';
 
@@ -57,10 +58,14 @@ export function WeeklyReview() {
         prevYmds.push(formatYmd(pd));
       }
 
-      const [raw, prevRaw] = await Promise.all([
-        Promise.all(ymds.map((d) => getEntry(d))),
-        Promise.all(prevYmds.map((d) => getEntry(d))),
-      ]);
+      const limit = pLimit(5);
+      const entryPromises = [
+        ...ymds.map((d) => limit(() => getEntry(d))),
+        ...prevYmds.map((d) => limit(() => getEntry(d))),
+      ];
+      const entries = await Promise.all(entryPromises);
+      const raw = entries.slice(0, ymds.length);
+      const prevRaw = entries.slice(ymds.length);
       const map = new Map<string, {
         done: number;
         total: number;
@@ -142,12 +147,19 @@ export function WeeklyReview() {
       const suggestions: Tip[] = [];
       for (const [habit, days] of missesThisWeek.entries()) {
         for (const day of days) {
-          let count = 1;
           const checkDate = new Date(start);
           checkDate.setDate(start.getDate() + day);
-          while (count < 5) {
-            checkDate.setDate(checkDate.getDate() - 7);
-            const prev = await getEntry(formatYmd(checkDate));
+          const prevDates: string[] = [];
+          for (let i = 1; i < 5; i++) {
+            const d = new Date(checkDate);
+            d.setDate(checkDate.getDate() - 7 * i);
+            prevDates.push(formatYmd(d));
+          }
+          const prevEntries = await Promise.all(
+            prevDates.map((d) => limit(() => getEntry(d)))
+          );
+          let count = 1;
+          for (const prev of prevEntries) {
             if (!prev) break;
             const e = JSON.parse(prev);
             const prevRoutines: { text: string; done: boolean }[] =
