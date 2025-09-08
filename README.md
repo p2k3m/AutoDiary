@@ -41,9 +41,22 @@ flowchart TD
 
 | Variable | Description |
 | --- | --- |
+| `AI_PROVIDER` | AI provider to use (`bedrock`, `openai`, or `gemini`) |
 | `BEDROCK_MODEL_ID` | Bedrock model used for AI summaries |
-| `USER_TOKEN_CAP` | Maximum tokens per user per week |
-| `SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries |
+| `BEDROCK_TOKEN_CAP` | Maximum tokens per user per week (Bedrock) |
+| `BEDROCK_COST_CAP` | Maximum cost per user per week (Bedrock) |
+| `BEDROCK_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (Bedrock) |
+| `BEDROCK_COST_PER_1K` | Cost in USD per 1K tokens (Bedrock) |
+| `OPENAI_MODEL_ID` | OpenAI model used for AI summaries |
+| `OPENAI_TOKEN_CAP` | Maximum tokens per user per week (OpenAI) |
+| `OPENAI_COST_CAP` | Maximum cost per user per week (OpenAI) |
+| `OPENAI_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (OpenAI) |
+| `OPENAI_COST_PER_1K` | Cost in USD per 1K tokens (OpenAI) |
+| `GEMINI_MODEL_ID` | Gemini model used for AI summaries |
+| `GEMINI_TOKEN_CAP` | Maximum tokens per user per week (Gemini) |
+| `GEMINI_COST_CAP` | Maximum cost per user per week (Gemini) |
+| `GEMINI_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (Gemini) |
+| `GEMINI_COST_PER_1K` | Cost in USD per 1K tokens (Gemini) |
 | `BUCKET_NAME` | Target bucket for results |
 
 ### Identity provider parameters
@@ -110,5 +123,5 @@ Two workflows automate infrastructure management:
 
 ## Optional features
 
-The `weekly-review` Lambda summarises each user's week using Amazon Bedrock and runs every Sunday at 19:00 UTC. Deploy `packages/infra/lib/weekly-review-stack.ts` if this feature is desired; otherwise it can be omitted.
+The `weekly-review` Lambda summarises each user's week using the configured AI provider and runs every Sunday at 19:00 UTC. Deploy `packages/infra/lib/weekly-review-stack.ts` if this feature is desired; otherwise it can be omitted.
 

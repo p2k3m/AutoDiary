@@ -13,6 +13,8 @@ import {
   GetItemCommand,
   PutItemCommand,
 } from '@aws-sdk/client-dynamodb';
+import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface HabitStat {
   name: string;
@@ -32,18 +34,60 @@ export interface WeeklyReviewResult {
   aiSummary?: string;
 }
 
-const modelId = process.env.BEDROCK_MODEL_ID ?? '';
-const userTokenCap = parseInt(process.env.USER_TOKEN_CAP ?? '0');
-const summaryTokenLimit = parseInt(process.env.SUMMARY_TOKEN_LIMIT ?? '0');
+const aiProvider = (process.env.AI_PROVIDER ?? 'bedrock') as
+  | 'bedrock'
+  | 'openai'
+  | 'gemini';
+
+const providerConfigs = {
+  bedrock: {
+    modelId: process.env.BEDROCK_MODEL_ID ?? '',
+    tokenCap: parseInt(process.env.BEDROCK_TOKEN_CAP ?? '0', 10),
+    summaryTokenLimit: parseInt(
+      process.env.BEDROCK_SUMMARY_TOKEN_LIMIT ?? '0',
+      10
+    ),
+    costCap: parseFloat(process.env.BEDROCK_COST_CAP ?? '0'),
+    costPer1k: parseFloat(process.env.BEDROCK_COST_PER_1K ?? '0'),
+  },
+  openai: {
+    modelId: process.env.OPENAI_MODEL_ID ?? 'gpt-3.5-turbo',
+    tokenCap: parseInt(process.env.OPENAI_TOKEN_CAP ?? '0', 10),
+    summaryTokenLimit: parseInt(
+      process.env.OPENAI_SUMMARY_TOKEN_LIMIT ?? '0',
+      10
+    ),
+    costCap: parseFloat(process.env.OPENAI_COST_CAP ?? '0'),
+    costPer1k: parseFloat(process.env.OPENAI_COST_PER_1K ?? '0'),
+  },
+  gemini: {
+    modelId: process.env.GEMINI_MODEL_ID ?? 'gemini-pro',
+    tokenCap: parseInt(process.env.GEMINI_TOKEN_CAP ?? '0', 10),
+    summaryTokenLimit: parseInt(
+      process.env.GEMINI_SUMMARY_TOKEN_LIMIT ?? '0',
+      10
+    ),
+    costCap: parseFloat(process.env.GEMINI_COST_CAP ?? '0'),
+    costPer1k: parseFloat(process.env.GEMINI_COST_PER_1K ?? '0'),
+  },
+} as const;
+
+const { modelId, tokenCap, summaryTokenLimit, costCap, costPer1k } =
+  providerConfigs[aiProvider];
 const bucketName = process.env.BUCKET_NAME ?? '';
 const tokenTableName = process.env.TOKEN_TABLE_NAME ?? '';
-
-const client = new BedrockRuntimeClient({});
+const bedrockClient = new BedrockRuntimeClient({});
+const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? '' });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 const s3 = new S3Client({});
 const dynamo = new DynamoDBClient({});
 
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+function estimateCost(tokens: number): number {
+  return (tokens / 1000) * costPer1k;
 }
 
 function startOfWeek(date: Date): Date {
@@ -69,10 +113,11 @@ function formatYmd(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-async function checkAndConsumeTokens(
+async function checkAndConsumeUsage(
   userId: string,
   weekStart: string,
-  needed: number
+  neededTokens: number,
+  neededCost: number
 ): Promise<boolean> {
   const data = await dynamo.send(
     new GetItemCommand({
@@ -81,10 +126,13 @@ async function checkAndConsumeTokens(
     })
   );
   let tokens = 0;
+  let cost = 0;
   if (data.Item && data.Item.weekStart?.S === weekStart) {
     tokens = parseInt(data.Item.tokens?.N ?? '0', 10);
+    cost = parseFloat(data.Item.cost?.N ?? '0');
   }
-  if (tokens + needed > userTokenCap) return false;
+  if (tokens + neededTokens > tokenCap || cost + neededCost > costCap)
+    return false;
 
   await dynamo.send(
     new PutItemCommand({
@@ -92,7 +140,8 @@ async function checkAndConsumeTokens(
       Item: {
         userId: { S: userId },
         weekStart: { S: weekStart },
-        tokens: { N: String(tokens + needed) },
+        tokens: { N: String(tokens + neededTokens) },
+        cost: { N: String(cost + neededCost) },
       },
     })
   );
@@ -188,30 +237,53 @@ async function generateReviewForUser(userId: string): Promise<void> {
   }
 
   const prompt = 'Write a short summary of this week.';
-  const needed = estimateTokens(prompt) + summaryTokenLimit;
+  const neededTokens = estimateTokens(prompt) + summaryTokenLimit;
+  const neededCost = estimateCost(neededTokens);
   const weekStartStr = formatYmd(start);
 
   let aiSummary: string | undefined;
-  if (await checkAndConsumeTokens(userId, weekStartStr, needed)) {
-    const command = new InvokeModelCommand({
-      modelId,
-      contentType: 'application/json',
-      accept: 'application/json',
-      body: JSON.stringify({
-        anthropic_version: 'bedrock-2023-05-31',
-        messages: [
-          {
-            role: 'user',
-            content: [{ type: 'text', text: prompt }],
-          },
-        ],
-        max_tokens: summaryTokenLimit,
-      }),
-    });
+  if (await checkAndConsumeUsage(userId, weekStartStr, neededTokens, neededCost)) {
+    switch (aiProvider) {
+      case 'openai': {
+        const completion = await openaiClient.chat.completions.create({
+          model: modelId,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: summaryTokenLimit,
+        });
+        aiSummary = completion.choices[0].message?.content?.trim() ?? '';
+        break;
+      }
+      case 'gemini': {
+        const model = genAI.getGenerativeModel({ model: modelId });
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: summaryTokenLimit },
+        });
+        aiSummary = result.response.text();
+        break;
+      }
+      default: {
+        const command = new InvokeModelCommand({
+          modelId,
+          contentType: 'application/json',
+          accept: 'application/json',
+          body: JSON.stringify({
+            anthropic_version: 'bedrock-2023-05-31',
+            messages: [
+              {
+                role: 'user',
+                content: [{ type: 'text', text: prompt }],
+              },
+            ],
+            max_tokens: summaryTokenLimit,
+          }),
+        });
 
-    const response = await client.send(command);
-    const completion = JSON.parse(new TextDecoder().decode(response.body));
-    aiSummary = completion.output_text ?? '';
+        const response = await bedrockClient.send(command);
+        const completion = JSON.parse(new TextDecoder().decode(response.body));
+        aiSummary = completion.output_text ?? '';
+      }
+    }
   }
 
   const yyyy = start.getFullYear().toString();
