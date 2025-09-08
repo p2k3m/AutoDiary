@@ -41,13 +41,10 @@ jobs:
 
       - name: Empty S3 buckets
         run: |
-          stacks=$(aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE --query 'StackSummaries[].StackName' --output text)
-          for stack in $stacks; do
-            buckets=$(aws cloudformation list-stack-resources --stack-name $stack --query "StackResourceSummaries[?ResourceType=='AWS::S3::Bucket'].PhysicalResourceId" --output text)
-            for bucket in $buckets; do
-              aws s3 rm "s3://$bucket" --recursive || true
-            done
-          done
+          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json)
+          USER_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json)
+          aws s3 rm "s3://$WEB_BUCKET" --recursive || true
+          aws s3 rm "s3://$USER_BUCKET" --recursive || true
 
       - name: Destroy CDK stacks
         working-directory: packages/infra
