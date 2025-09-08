@@ -32,12 +32,60 @@ flowchart TD
 - AWS CLI configured locally
 - (Optional) [GitHub CLI](https://cli.github.com/) for running workflows
 
-## GitHub configuration
+## Environment variables
 
-Set the following repository variables and secrets before running the GitHub
-Actions workflows.
+Create `packages/web/.env` and define:
 
-### Repository variables
+| Variable | Description |
+| --- | --- |
+| `VITE_REGION` | AWS region for the web client |
+| `VITE_USER_POOL_ID` | Cognito user pool id |
+| `VITE_USER_POOL_CLIENT_ID` | Cognito app client id |
+| `VITE_IDENTITY_POOL_ID` | Cognito identity pool id |
+| `VITE_HOSTED_UI_DOMAIN` | Cognito hosted UI domain (from `HostedUiDomain` stack output) |
+| `VITE_ENTRY_BUCKET` | S3 bucket for journal entries |
+| `VITE_TEST_MODE` | Set to `true` to enable test fixtures |
+
+## Local development
+
+1. Install dependencies:
+
+   ```bash
+   yarn install
+   ```
+
+2. Start the web application:
+
+   ```bash
+   yarn workspace web dev
+   ```
+
+3. Work on infrastructure:
+
+   ```bash
+   yarn workspace infra build
+   yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
+   ```
+
+4. Run tests across all packages:
+
+   ```bash
+   yarn test
+   ```
+
+5. Build all packages:
+
+   ```bash
+   yarn build
+   ```
+
+## Deployment and teardown workflows
+
+### GitHub configuration
+
+Set the following repository variables and secrets before running the GitHub Actions workflows.
+
+#### Repository variables
 
 | Variable | Description |
 | --- | --- |
@@ -51,51 +99,37 @@ Actions workflows.
 | `BEDROCK_COST_CAP` | Maximum Bedrock cost per user per week (USD) |
 | `BEDROCK_COST_PER_1K` | Bedrock cost in USD per 1K tokens |
 
-### Repository secrets
+#### Repository secrets
 
 - `AWS_ROLE_ARN` – IAM role assumed by GitHub Actions to perform deployments.
 - `OPENAI_API_KEY` – optional, required when `AI_PROVIDER` is set to `openai`.
 - `GEMINI_API_KEY` – optional, required when `AI_PROVIDER` is set to `gemini`.
 
-## Environment variables
+### Deploy (`deploy.yml`)
 
-| Variable | Description |
-| --- | --- |
-| `VITE_REGION` | AWS region for the web client |
-| `VITE_USER_POOL_ID` | Cognito user pool id |
-| `VITE_USER_POOL_CLIENT_ID` | Cognito app client id |
-| `VITE_IDENTITY_POOL_ID` | Cognito identity pool id |
-| `VITE_HOSTED_UI_DOMAIN` | Cognito hosted UI domain (from `HostedUiDomain` stack output) |
-| `VITE_ENTRY_BUCKET` | S3 bucket for journal entries |
-| `VITE_TEST_MODE` | Set to `true` to enable test fixtures |
+1. Configure repository variables and secrets as described above.
+2. Push to `main` or run the workflow manually:
 
-### Weekly review Lambda
+   ```bash
+   gh workflow run deploy.yml
+   ```
 
-| Variable | Description |
-| --- | --- |
-| `AI_PROVIDER` | AI provider to use (`bedrock`, `openai`, or `gemini`) |
-| `BEDROCK_MODEL_ID` | Bedrock model used for AI summaries |
-| `BEDROCK_TOKEN_CAP` | Maximum tokens per user per week (Bedrock) |
-| `BEDROCK_COST_CAP` | Maximum cost per user per week (Bedrock) |
-| `BEDROCK_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (Bedrock) |
-| `BEDROCK_COST_PER_1K` | Cost in USD per 1K tokens (Bedrock) |
-| `OPENAI_MODEL_ID` | OpenAI model used for AI summaries |
-| `OPENAI_TOKEN_CAP` | Maximum tokens per user per week (OpenAI) |
-| `OPENAI_COST_CAP` | Maximum cost per user per week (OpenAI) |
-| `OPENAI_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (OpenAI) |
-| `OPENAI_COST_PER_1K` | Cost in USD per 1K tokens (OpenAI) |
-| `GEMINI_MODEL_ID` | Gemini model used for AI summaries |
-| `GEMINI_TOKEN_CAP` | Maximum tokens per user per week (Gemini) |
-| `GEMINI_COST_CAP` | Maximum cost per user per week (Gemini) |
-| `GEMINI_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (Gemini) |
-| `GEMINI_COST_PER_1K` | Cost in USD per 1K tokens (Gemini) |
-| `BUCKET_NAME` | Target bucket for results |
+3. The workflow runs tests, deploys the CDK stacks, builds the web client, and uploads assets to S3. The CloudFront distribution URL is printed in the workflow summary.
 
-## Configuring Cognito IdP credentials
+### Destroy (`destroy.yml`)
 
-The CDK stack can enable social sign-in with Google, Microsoft, or Apple by
-looking up OAuth credentials from AWS Systems Manager Parameter Store. Create
-these parameters in the target AWS account before deploying:
+1. Ensure the same repository variables and secrets are available.
+2. Trigger the workflow from the Actions tab or run:
+
+   ```bash
+   gh workflow run destroy.yml
+   ```
+
+3. The workflow empties S3 buckets and destroys all CDK stacks for the specified domain and hosted zone.
+
+## Optional connectors
+
+The CDK stack can enable social sign-in with Google, Microsoft, or Apple by looking up OAuth credentials from AWS Systems Manager Parameter Store. Create these parameters in the target AWS account before deploying:
 
 | Parameter | Description |
 | --- | --- |
@@ -121,76 +155,31 @@ aws ssm put-parameter --name apple-key-id --type String --value <APPLE_KEY_ID>
 aws ssm put-parameter --name apple-private-key --type SecureString --value "$(cat AuthKey.p8)"
 ```
 
-The deployment workflow (`deploy.yml`) reads these parameters during `cdk deploy`.
-Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call
-`ssm:GetParameter` (and `kms:Decrypt` for secure strings).
-
-## Local development
-
-1. Install dependencies:
-
-   ```bash
-   yarn install
-   ```
-
-2. Create `packages/web/.env` and define the `VITE_*` variables listed above (use the `HostedUiDomain` stack output for `VITE_HOSTED_UI_DOMAIN`).
-
-3. Start the web application:
-
-   ```bash
-   yarn workspace web dev
-   ```
-
-4. To work on infrastructure:
-
-   ```bash
-   yarn workspace infra build
-   yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
-   ```
-
-5. Run tests across all packages:
-
-   ```bash
-   yarn test
-   ```
-
-6. Build all packages:
-
-   ```bash
-   yarn build
-   ```
-
-## CI/CD (GitHub Actions)
-
-### Deployment (`deploy.yml`)
-
-1. Configure repository variables and secrets as described in [GitHub configuration](#github-configuration).
-2. Push to `main` or run the workflow manually with:
-
-   ```bash
-   gh workflow run deploy.yml
-   ```
-
-3. The workflow runs tests, deploys the CDK stacks, builds the web client, and
-   uploads assets to S3. The CloudFront distribution URL is printed in the
-   workflow summary.
-
-### Teardown (`destroy.yml`)
-
-1. Ensure the same repository variables and secrets are available.
-2. Trigger the workflow from the Actions tab or run:
-
-   ```bash
-   gh workflow run destroy.yml
-   ```
-
-3. The workflow empties S3 buckets and destroys all CDK stacks for the
-   specified domain and hosted zone.
+Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call `ssm:GetParameter` (and `kms:Decrypt` for secure strings).
 
 ## Weekly review Lambda
 
-An optional scheduled Lambda summarises each user's week using the configured
-AI provider. It runs every Sunday at 19:00 UTC and writes summaries back to the
-user's data bucket. Deploy `packages/infra/lib/weekly-review-stack.ts` to
-enable the feature; omit the stack to skip weekly summaries.
+An optional scheduled Lambda summarises each user's week using the configured AI provider. It runs every Sunday at 19:00 UTC and writes summaries back to the user's data bucket. Deploy `packages/infra/lib/weekly-review-stack.ts` to enable the feature; omit the stack to skip weekly summaries.
+
+### Lambda environment variables
+
+| Variable | Description |
+| --- | --- |
+| `AI_PROVIDER` | AI provider to use (`bedrock`, `openai`, or `gemini`) |
+| `BEDROCK_MODEL_ID` | Bedrock model used for AI summaries |
+| `BEDROCK_TOKEN_CAP` | Maximum tokens per user per week (Bedrock) |
+| `BEDROCK_COST_CAP` | Maximum cost per user per week (Bedrock) |
+| `BEDROCK_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (Bedrock) |
+| `BEDROCK_COST_PER_1K` | Cost in USD per 1K tokens (Bedrock) |
+| `OPENAI_MODEL_ID` | OpenAI model used for AI summaries |
+| `OPENAI_TOKEN_CAP` | Maximum tokens per user per week (OpenAI) |
+| `OPENAI_COST_CAP` | Maximum cost per user per week (OpenAI) |
+| `OPENAI_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (OpenAI) |
+| `OPENAI_COST_PER_1K` | Cost in USD per 1K tokens (OpenAI) |
+| `GEMINI_MODEL_ID` | Gemini model used for AI summaries |
+| `GEMINI_TOKEN_CAP` | Maximum tokens per user per week (Gemini) |
+| `GEMINI_COST_CAP` | Maximum cost per user per week (Gemini) |
+| `GEMINI_SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries (Gemini) |
+| `GEMINI_COST_PER_1K` | Cost in USD per 1K tokens (Gemini) |
+| `BUCKET_NAME` | Target bucket for results |
 
