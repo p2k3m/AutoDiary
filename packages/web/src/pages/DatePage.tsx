@@ -239,8 +239,8 @@ export default function DatePage() {
         onChange={(items) => {
           setRoutineTicks(items);
           updateEntry(ymdStr, { routineTicks: items });
+          void saveEntry();
         }}
-        editable={ymdStr === todayYmd}
       />
 
       <textarea
