@@ -222,6 +222,10 @@ export class AppStack extends Stack {
       value: distro.distributionDomainName,
     });
 
+    new CfnOutput(this, 'CloudFrontDistributionId', {
+      value: distro.distributionId,
+    });
+
     new CfnOutput(this, 'Domain', { value: props.domain });
 
     new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
@@ -231,6 +235,8 @@ export class AppStack extends Stack {
     });
 
     new CfnOutput(this, 'IdentityPoolId', { value: identityPool.ref });
+
+    new CfnOutput(this, 'WebBucketName', { value: webBucket.bucketName });
 
     new CfnOutput(this, 'UserdataBucketName', { value: userBucket.bucketName });
   }

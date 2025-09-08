@@ -45,7 +45,9 @@ jobs:
 
       - name: Deploy CDK stacks
         working-directory: packages/infra
-        run: npx cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c deployWeeklyReview=$ENABLE_WEEKLY_LAMBDA --outputs-file cdk-outputs.json
+        run: |
+          rm -f cdk-outputs.json
+          npx cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c deployWeeklyReview=$ENABLE_WEEKLY_LAMBDA --outputs-file cdk-outputs.json
 
       - name: Build web
         working-directory: packages/web
