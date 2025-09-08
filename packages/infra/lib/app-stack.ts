@@ -77,7 +77,6 @@ export class AppStack extends Stack {
             ? [
                 `https://${props.domain}`,
                 `https://www.${props.domain}`,
-                `https://${distro.distributionDomainName}`,
               ]
             : [`https://${distro.distributionDomainName}`],
           allowedHeaders: ['*'],
