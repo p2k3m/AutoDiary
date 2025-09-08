@@ -37,34 +37,48 @@ export class WeeklyReviewStack extends Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
 
+    const environment: Record<string, string> = {
+      BUCKET_NAME: props.bucket.bucketName,
+      BEDROCK_MODEL_ID: bedrockModelId,
+      BEDROCK_TOKEN_CAP:
+        this.node.tryGetContext('bedrockTokenCap') ||
+        process.env.BEDROCK_TOKEN_CAP ||
+        '10000',
+      BEDROCK_SUMMARY_TOKEN_LIMIT:
+        this.node.tryGetContext('bedrockSummaryTokenLimit') ||
+        process.env.BEDROCK_SUMMARY_TOKEN_LIMIT ||
+        '1000',
+      BEDROCK_COST_CAP:
+        this.node.tryGetContext('bedrockCostCap') ||
+        process.env.BEDROCK_COST_CAP ||
+        '0',
+      BEDROCK_COST_PER_1K:
+        this.node.tryGetContext('bedrockCostPer1k') ||
+        process.env.BEDROCK_COST_PER_1K ||
+        '0',
+      TOKEN_TABLE_NAME: tokenTable.tableName,
+      AI_PROVIDER: aiProvider,
+    };
+
+    if (aiProvider === 'openai') {
+      environment.OPENAI_API_KEY =
+        this.node.tryGetContext('openaiApiKey') ||
+        process.env.OPENAI_API_KEY ||
+        '';
+    } else if (aiProvider === 'gemini') {
+      environment.GEMINI_API_KEY =
+        this.node.tryGetContext('geminiApiKey') ||
+        process.env.GEMINI_API_KEY ||
+        '';
+    }
+
     const fn = new lambdaNodejs.NodejsFunction(this, 'WeeklyReviewFunction', {
       functionName: 'weekly-review',
       entry: path.join(__dirname, '../functions/weekly-review.ts'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_20_X,
       timeout: Duration.minutes(15),
-      environment: {
-        BUCKET_NAME: props.bucket.bucketName,
-        BEDROCK_MODEL_ID: bedrockModelId,
-        BEDROCK_TOKEN_CAP:
-          this.node.tryGetContext('bedrockTokenCap') ||
-          process.env.BEDROCK_TOKEN_CAP ||
-          '10000',
-        BEDROCK_SUMMARY_TOKEN_LIMIT:
-          this.node.tryGetContext('bedrockSummaryTokenLimit') ||
-          process.env.BEDROCK_SUMMARY_TOKEN_LIMIT ||
-          '1000',
-        BEDROCK_COST_CAP:
-          this.node.tryGetContext('bedrockCostCap') ||
-          process.env.BEDROCK_COST_CAP ||
-          '0',
-        BEDROCK_COST_PER_1K:
-          this.node.tryGetContext('bedrockCostPer1k') ||
-          process.env.BEDROCK_COST_PER_1K ||
-          '0',
-        TOKEN_TABLE_NAME: tokenTable.tableName,
-        AI_PROVIDER: aiProvider,
-      },
+      environment,
     });
 
     // Allow listing and reading objects only under the private/ prefix
