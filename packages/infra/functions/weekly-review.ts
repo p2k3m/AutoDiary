@@ -307,17 +307,24 @@ async function generateReviewForUser(userId: string): Promise<void> {
 }
 
 export async function handler(): Promise<void> {
-  const list = await s3.send(
-    new ListObjectsV2Command({
-      Bucket: bucketName,
-      Prefix: 'private/',
-      Delimiter: '/',
-    })
-  );
-  const userIds =
-    list.CommonPrefixes?.map((cp) => cp.Prefix?.split('/')[1]).filter(
-      (id): id is string => !!id
-    ) ?? [];
+  const userIds = new Set<string>();
+  let continuationToken: string | undefined;
+
+  do {
+    const list = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: 'private/',
+        Delimiter: '/',
+        ContinuationToken: continuationToken,
+      })
+    );
+    list.CommonPrefixes?.forEach((cp) => {
+      const id = cp.Prefix?.split('/')[1];
+      if (id) userIds.add(id);
+    });
+    continuationToken = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (continuationToken);
 
   for (const userId of userIds) {
     await generateReviewForUser(userId);
