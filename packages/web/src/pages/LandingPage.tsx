@@ -6,10 +6,14 @@ export default function LandingPage() {
   const { login } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
 
-  const providers = ['Google', 'Microsoft', 'Apple'];
+  const providers = [
+    { label: 'Google', id: 'Google' },
+    { label: 'Microsoft', id: 'microsoft' },
+    { label: 'Apple', id: 'SignInWithApple' },
+  ];
 
-  const handleProviderClick = (provider: string) => {
-    login(provider);
+  const handleProviderClick = (id: string) => {
+    login(id);
     setShowMenu(false);
   };
 
@@ -25,18 +29,18 @@ export default function LandingPage() {
           className="rounded bg-blue-500 px-4 py-2 text-white"
           onClick={() => setShowMenu((s) => !s)}
         >
-          Sign in with Google · Microsoft · Apple
+          Sign in with {providers.map((p) => p.label).join(' · ')}
         </button>
         {showMenu && (
           <div className="absolute left-1/2 top-full z-10 mt-2 flex w-max -translate-x-1/2 flex-col rounded border bg-white text-left shadow">
-            {providers.map((provider) => (
+            {providers.map(({ label, id }) => (
               <button
-                key={provider}
+                key={id}
                 type="button"
                 className="px-4 py-2 hover:bg-gray-100"
-                onClick={() => handleProviderClick(provider)}
+                onClick={() => handleProviderClick(id)}
               >
-                {provider}
+                {label}
               </button>
             ))}
           </div>
