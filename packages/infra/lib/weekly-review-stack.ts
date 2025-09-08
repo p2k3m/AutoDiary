@@ -22,6 +22,16 @@ export class WeeklyReviewStack extends Stack {
   constructor(scope: Construct, id: string, props: WeeklyReviewStackProps) {
     super(scope, id, props);
 
+    const bedrockModelId =
+      this.node.tryGetContext('bedrockModelId') ||
+      process.env.BEDROCK_MODEL_ID ||
+      'anthropic.claude-v2';
+
+    const aiProvider =
+      this.node.tryGetContext('aiProvider') ||
+      process.env.AI_PROVIDER ||
+      'bedrock';
+
     const tokenTable = new dynamodb.Table(this, 'WeeklyReviewTokens', {
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -35,10 +45,7 @@ export class WeeklyReviewStack extends Stack {
       timeout: Duration.minutes(15),
       environment: {
         BUCKET_NAME: props.bucket.bucketName,
-        BEDROCK_MODEL_ID:
-          this.node.tryGetContext('bedrockModelId') ||
-          process.env.BEDROCK_MODEL_ID ||
-          'anthropic.claude-v2',
+        BEDROCK_MODEL_ID: bedrockModelId,
         BEDROCK_TOKEN_CAP:
           this.node.tryGetContext('bedrockTokenCap') ||
           process.env.BEDROCK_TOKEN_CAP ||
@@ -56,10 +63,7 @@ export class WeeklyReviewStack extends Stack {
           process.env.BEDROCK_COST_PER_1K ||
           '0',
         TOKEN_TABLE_NAME: tokenTable.tableName,
-        AI_PROVIDER:
-          this.node.tryGetContext('aiProvider') ||
-          process.env.AI_PROVIDER ||
-          'bedrock',
+        AI_PROVIDER: aiProvider,
       },
     });
 
@@ -75,14 +79,16 @@ export class WeeklyReviewStack extends Stack {
       authType: lambda.FunctionUrlAuthType.AWS_IAM,
     });
 
-    fn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['bedrock:InvokeModel'],
-        resources: [
-          `arn:aws:bedrock:${this.region}::foundation-model/anthropic.claude-v2`,
-        ],
-      })
-    );
+    if (aiProvider === 'bedrock') {
+      fn.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ['bedrock:InvokeModel'],
+          resources: [
+            `arn:aws:bedrock:${this.region}::foundation-model/${bedrockModelId}`,
+          ],
+        })
+      );
+    }
 
     const rule = new events.Rule(this, 'WeeklyReviewSchedule', {
       schedule: events.Schedule.cron({ weekDay: 'SUN', hour: '19', minute: '0' }),
