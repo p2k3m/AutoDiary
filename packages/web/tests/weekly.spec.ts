@@ -1,5 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
+/**
+ * Helper returning the Monday at the start of the given week.
+ */
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
   const diff = (d.getDay() + 6) % 7; // Monday as start
@@ -12,18 +15,33 @@ function formatYmd(d: Date): string {
   return d.toLocaleDateString('en-CA');
 }
 
-test('weekly review shows habit stats, streaks and suggestions', async ({ page }) => {
-  const start = startOfWeek(new Date());
-  const habit = 'Exercise';
-  const statuses = [false, true, false, false, true, true, true];
+/**
+ * Seed a full week's worth of entries for a habit using the provided
+ * completion statuses.
+ */
+function seedWeek(
+  habit: string,
+  start: Date,
+  statuses: boolean[],
+): Record<string, unknown> {
   const entries: Record<string, unknown> = {};
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < statuses.length; i++) {
     const day = new Date(start);
     day.setDate(start.getDate() + i);
     entries[formatYmd(day)] = {
       routineTicks: [{ text: habit, done: statuses[i] }],
     };
   }
+  return entries;
+}
+
+test('weekly review shows habit stats, streaks and suggestions', async ({
+  page,
+}) => {
+  const habit = 'Exercise';
+  const start = startOfWeek(new Date());
+  const statuses = [false, true, false, false, true, true, true]; // 7 days
+  const entries = seedWeek(habit, start, statuses);
 
   await page.route('**/entries/**', async (route) => {
     const url = new URL(route.request().url());
@@ -54,7 +72,7 @@ test('weekly review shows habit stats, streaks and suggestions', async ({ page }
 
   await expect(page.getByRole('heading', { name: 'How to improve' })).toBeVisible();
   await expect(
-    page.getByText(`Focus more on ${habit} (only 4/7).`)
+    page.getByText(`Focus more on ${habit} (only 4/7).`),
   ).toBeVisible();
 });
 
