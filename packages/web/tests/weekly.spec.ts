@@ -14,13 +14,14 @@ function formatYmd(d: Date): string {
 
 test('weekly review shows habit stats, streaks and suggestions', async ({ page }) => {
   const start = startOfWeek(new Date());
+  const habit = 'Exercise';
   const statuses = [false, true, false, false, true, true, true];
   const entries: Record<string, unknown> = {};
   for (let i = 0; i < 7; i++) {
     const day = new Date(start);
     day.setDate(start.getDate() + i);
     entries[formatYmd(day)] = {
-      routineTicks: [{ text: 'Exercise', done: statuses[i] }],
+      routineTicks: [{ text: habit, done: statuses[i] }],
     };
   }
 
@@ -47,13 +48,13 @@ test('weekly review shows habit stats, streaks and suggestions', async ({ page }
   await page.goto('/weekly');
 
   const stats = page.locator('ul').first();
-  const item = stats.getByRole('listitem').filter({ hasText: 'Exercise' });
+  const item = stats.getByRole('listitem').filter({ hasText: habit });
   await expect(item.getByText('4/7', { exact: true })).toBeVisible();
   await expect(item.getByText('3d streak')).toBeVisible();
 
   await expect(page.getByRole('heading', { name: 'How to improve' })).toBeVisible();
   await expect(
-    page.getByText('Focus more on Exercise (only 4/7).')
+    page.getByText(`Focus more on ${habit} (only 4/7).`)
   ).toBeVisible();
 });
 
