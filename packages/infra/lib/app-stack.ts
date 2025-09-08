@@ -205,7 +205,7 @@ export class AppStack extends Stack {
 
     authRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['s3:GetObject', 's3:PutObject'],
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
         resources: [
           userBucket.arnForObjects(
             'private/${cognito-identity.amazonaws.com:sub}/*'
