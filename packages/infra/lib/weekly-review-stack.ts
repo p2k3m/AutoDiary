@@ -67,10 +67,19 @@ export class WeeklyReviewStack extends Stack {
       },
     });
 
-    // Allow listing of objects under the private/ prefix
-    props.bucket.grantRead(fn);
-    props.bucket.grantRead(fn, 'private/*/entries/*');
-    props.bucket.grantRead(fn, 'private/*/connectors/*');
+    // Allow listing and reading objects only under the private/ prefix
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:ListBucket', 's3:GetObject'],
+        resources: [
+          props.bucket.bucketArn,
+          props.bucket.arnForObjects('private/*'),
+        ],
+        conditions: {
+          StringLike: { 's3:prefix': ['private/*'] },
+        },
+      })
+    );
     props.bucket.grantReadWrite(fn, 'private/*/weekly/*');
 
     tokenTable.grantReadWriteData(fn);
