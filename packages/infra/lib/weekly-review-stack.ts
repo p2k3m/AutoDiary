@@ -63,15 +63,17 @@ export class WeeklyReviewStack extends Stack {
       },
     });
 
-    const fnUrl = fn.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.AWS_IAM,
-    });
-
+    // Allow listing of objects under the private/ prefix
+    props.bucket.grantRead(fn);
     props.bucket.grantRead(fn, 'private/*/entries/*');
     props.bucket.grantRead(fn, 'private/*/connectors/*');
     props.bucket.grantReadWrite(fn, 'private/*/weekly/*');
 
     tokenTable.grantReadWriteData(fn);
+
+    const fnUrl = fn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.AWS_IAM,
+    });
 
     fn.addToRolePolicy(
       new iam.PolicyStatement({
