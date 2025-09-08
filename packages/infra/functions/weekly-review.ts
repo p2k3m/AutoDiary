@@ -8,6 +8,11 @@ import {
   ListObjectsV2Command,
   S3Client,
 } from '@aws-sdk/client-s3';
+import {
+  DynamoDBClient,
+  GetItemCommand,
+  PutItemCommand,
+} from '@aws-sdk/client-dynamodb';
 
 interface HabitStat {
   name: string;
@@ -31,10 +36,11 @@ const modelId = process.env.BEDROCK_MODEL_ID ?? '';
 const userTokenCap = parseInt(process.env.USER_TOKEN_CAP ?? '0');
 const summaryTokenLimit = parseInt(process.env.SUMMARY_TOKEN_LIMIT ?? '0');
 const bucketName = process.env.BUCKET_NAME ?? '';
+const tokenTableName = process.env.TOKEN_TABLE_NAME ?? '';
 
 const client = new BedrockRuntimeClient({});
 const s3 = new S3Client({});
-const tokenUsage: Record<string, number> = {};
+const dynamo = new DynamoDBClient({});
 
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
@@ -61,6 +67,37 @@ function formatYmd(d: Date): string {
   const mm = (d.getMonth() + 1).toString().padStart(2, '0');
   const dd = d.getDate().toString().padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+async function checkAndConsumeTokens(
+  userId: string,
+  weekStart: string,
+  needed: number
+): Promise<boolean> {
+  const data = await dynamo.send(
+    new GetItemCommand({
+      TableName: tokenTableName,
+      Key: { userId: { S: userId } },
+    })
+  );
+  let tokens = 0;
+  if (data.Item && data.Item.weekStart?.S === weekStart) {
+    tokens = parseInt(data.Item.tokens?.N ?? '0', 10);
+  }
+  if (tokens + needed > userTokenCap) return false;
+
+  await dynamo.send(
+    new PutItemCommand({
+      TableName: tokenTableName,
+      Item: {
+        userId: { S: userId },
+        weekStart: { S: weekStart },
+        tokens: { N: String(tokens + needed) },
+      },
+    })
+  );
+
+  return true;
 }
 
 async function generateReviewForUser(userId: string): Promise<void> {
@@ -150,12 +187,12 @@ async function generateReviewForUser(userId: string): Promise<void> {
     // ignore if missing
   }
 
-  const used = tokenUsage[userId] ?? 0;
   const prompt = 'Write a short summary of this week.';
   const needed = estimateTokens(prompt) + summaryTokenLimit;
+  const weekStartStr = formatYmd(start);
 
   let aiSummary: string | undefined;
-  if (used + needed <= userTokenCap) {
+  if (await checkAndConsumeTokens(userId, weekStartStr, needed)) {
     const command = new InvokeModelCommand({
       modelId,
       contentType: 'application/json',
@@ -175,7 +212,6 @@ async function generateReviewForUser(userId: string): Promise<void> {
     const response = await client.send(command);
     const completion = JSON.parse(new TextDecoder().decode(response.body));
     aiSummary = completion.output_text ?? '';
-    tokenUsage[userId] = used + needed;
   }
 
   const yyyy = start.getFullYear().toString();
