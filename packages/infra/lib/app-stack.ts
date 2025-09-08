@@ -52,6 +52,7 @@ export class AppStack extends Stack {
             `https://www.${props.domain}`,
           ],
           allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
         },
       ],
     });
