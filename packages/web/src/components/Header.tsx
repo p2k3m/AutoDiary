@@ -47,12 +47,14 @@ export function Header() {
       <div className="flex items-center gap-2">
         <div className="relative">
           <input
+            type="search"
+            aria-label="Search entries"
             className="rounded border px-2 py-1 dark:bg-gray-800"
             placeholder="Search entries"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {results.length > 0 && (
+          {query && results.length > 0 && (
             <ul className="absolute right-0 mt-1 w-64 max-h-60 overflow-auto rounded border bg-white shadow dark:bg-gray-800">
               {results.slice(0, 10).map((r) => (
                 <li key={r.ymd}>
