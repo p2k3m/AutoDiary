@@ -144,9 +144,9 @@ export function Attachments({
   };
 
   const removeExisting = async (idx: number) => {
-    const next = [...existing];
-    const [removed] = next.splice(idx, 1);
-    const key = attachmentKey(ymd, removed.uuid, removed.ext);
+    const item = existing[idx];
+    const key = attachmentKey(ymd, item.uuid, item.ext);
+
     try {
       const res = await client.send(
         new DeleteObjectCommand({ Bucket: bucket, Key: key })
@@ -154,25 +154,29 @@ export function Attachments({
       if (res.$metadata.httpStatusCode === 202) {
         window.alert('Deletion queued for sync when back online.');
       }
+
+      const next = [...existing];
+      next.splice(idx, 1);
+      onExistingChange(next);
+
+      setUrls((prev) => {
+        const copy = { ...prev };
+        delete copy[item.uuid];
+        return copy;
+      });
+      setProgress((prev) => {
+        const copy = { ...prev };
+        delete copy[item.uuid];
+        return copy;
+      });
+      setPending((prev) => {
+        const copy = { ...prev };
+        delete copy[item.uuid];
+        return copy;
+      });
     } catch (err) {
       console.error(err);
     }
-    onExistingChange(next);
-    setUrls((prev) => {
-      const copy = { ...prev };
-      delete copy[removed.uuid];
-      return copy;
-    });
-    setProgress((prev) => {
-      const copy = { ...prev };
-      delete copy[removed.uuid];
-      return copy;
-    });
-    setPending((prev) => {
-      const copy = { ...prev };
-      delete copy[removed.uuid];
-      return copy;
-    });
   };
 
   return (
