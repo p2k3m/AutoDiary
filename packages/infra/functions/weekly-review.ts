@@ -41,7 +41,7 @@ const aiProvider = (process.env.AI_PROVIDER ?? 'bedrock') as
 
 const providerConfigs = {
   bedrock: {
-    modelId: process.env.BEDROCK_MODEL_ID ?? '',
+    modelId: process.env.BEDROCK_MODEL_ID ?? 'anthropic.claude-v2',
     tokenCap: parseInt(process.env.BEDROCK_TOKEN_CAP ?? '0', 10),
     summaryTokenLimit: parseInt(
       process.env.BEDROCK_SUMMARY_TOKEN_LIMIT ?? '0',

@@ -20,6 +20,10 @@ jobs:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
       ENABLE_WEEKLY_LAMBDA: ${{ vars.ENABLE_WEEKLY_LAMBDA }}
+      BEDROCK_TOKEN_CAP: ${{ vars.BEDROCK_TOKEN_CAP }}
+      BEDROCK_COST_CAP: ${{ vars.BEDROCK_COST_CAP }}
+      BEDROCK_COST_PER_1K: ${{ vars.BEDROCK_COST_PER_1K }}
+      AI_PROVIDER: ${{ vars.AI_PROVIDER }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,7 +51,7 @@ jobs:
         working-directory: packages/infra
         run: |
           rm -f cdk-outputs.json
-          yarn cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c deployWeeklyReview=$ENABLE_WEEKLY_LAMBDA --outputs-file cdk-outputs.json
+          yarn cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c deployWeeklyReview=$ENABLE_WEEKLY_LAMBDA -c bedrockTokenCap=$BEDROCK_TOKEN_CAP -c bedrockCostCap=$BEDROCK_COST_CAP -c bedrockCostPer1k=$BEDROCK_COST_PER_1K -c aiProvider=$AI_PROVIDER --outputs-file cdk-outputs.json
 
       - name: Build web
         working-directory: packages/web
