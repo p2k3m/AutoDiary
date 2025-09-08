@@ -61,7 +61,7 @@ export default function DatePage() {
     void loadEntry();
   }, [loadEntry]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     void (async () => {
       await saveEntry();
       if (ymdStr !== todayYmd) {
@@ -75,7 +75,7 @@ export default function DatePage() {
         navigate(`/date/${nextYmd}`);
       }
     })();
-  };
+  }, [navigate, saveEntry, setCurrentDate, todayYmd, ymdStr]);
 
   const fetchMeta = useCallback(
     async (force = false) => {
@@ -131,6 +131,61 @@ export default function DatePage() {
     navigator.serviceWorker?.addEventListener('message', handler);
     return () => navigator.serviceWorker?.removeEventListener('message', handler);
   }, [loadEntry]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === 'j') {
+        e.preventDefault();
+        void (async () => {
+          await saveEntry();
+          const next = parseYmd(ymdStr);
+          next.setDate(next.getDate() + 1);
+          const nextYmd = formatYmd(next);
+          setCurrentDate(nextYmd);
+          navigate(`/date/${nextYmd}`);
+        })();
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        void (async () => {
+          await saveEntry();
+          const prev = parseYmd(ymdStr);
+          prev.setDate(prev.getDate() - 1);
+          const prevYmd = formatYmd(prev);
+          setCurrentDate(prevYmd);
+          navigate(`/date/${prevYmd}`);
+        })();
+      } else if (e.key === 'g') {
+        e.preventDefault();
+        const date = window.prompt('Go to date (YYYY-MM-DD):', ymdStr);
+        if (date) {
+          void (async () => {
+            await saveEntry();
+            setCurrentDate(date);
+            navigate(`/date/${date}`);
+          })();
+        }
+      } else if (e.key === 't') {
+        e.preventDefault();
+        void (async () => {
+          await saveEntry();
+          setCurrentDate(todayYmd);
+          navigate(`/date/${todayYmd}`);
+        })();
+      } else if (e.key === 'n') {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleNext, navigate, saveEntry, setCurrentDate, todayYmd, ymdStr]);
 
   const handleMainChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const mainVal = e.target.value;
