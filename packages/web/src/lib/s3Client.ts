@@ -199,14 +199,24 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
 export async function listMonth(yyyy: string, mm: string): Promise<string[]> {
   const client = getClient();
   const prefix = `${useAuth.getState().userPrefix ?? ''}/entries/${yyyy}/${mm}/`;
-  const res = await client.send(
-    new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix })
-  );
-  return (
-    res.Contents?.map((obj) => obj.Key || '')
-      .filter((k) => k)
-      .map((k) => k.slice(prefix.length).replace(/\.json$/, '')) ?? []
-  );
+  const days: string[] = [];
+  let token: string | undefined;
+  do {
+    const res = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: token,
+      })
+    );
+    days.push(
+      ...(res.Contents?.map((obj) => obj.Key || '')
+        .filter((k) => k)
+        .map((k) => k.slice(prefix.length).replace(/\.json$/, '')) ?? [])
+    );
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return days;
 }
 
 export async function listMonthInk(
@@ -215,16 +225,24 @@ export async function listMonthInk(
 ): Promise<Record<string, number>> {
   const client = getClient();
   const prefix = `${useAuth.getState().userPrefix ?? ''}/entries/${yyyy}/${mm}/`;
-  const res = await client.send(
-    new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix })
-  );
   const map: Record<string, number> = {};
-  res.Contents?.forEach((obj) => {
-    if (obj.Key) {
-      const day = obj.Key.slice(prefix.length).replace(/\.json$/, '');
-      map[day] = obj.Size ?? 0;
-    }
-  });
+  let token: string | undefined;
+  do {
+    const res = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: token,
+      })
+    );
+    res.Contents?.forEach((obj) => {
+      if (obj.Key) {
+        const day = obj.Key.slice(prefix.length).replace(/\.json$/, '');
+        map[day] = obj.Size ?? 0;
+      }
+    });
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
   return map;
 }
 
