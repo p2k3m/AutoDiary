@@ -35,10 +35,31 @@ export class WeeklyReviewStack extends Stack {
       timeout: Duration.minutes(15),
       environment: {
         BUCKET_NAME: props.bucket.bucketName,
-        BEDROCK_MODEL_ID: 'anthropic.claude-v2',
-        USER_TOKEN_CAP: '10000',
-        SUMMARY_TOKEN_LIMIT: '1000',
+        BEDROCK_MODEL_ID:
+          this.node.tryGetContext('bedrockModelId') ||
+          process.env.BEDROCK_MODEL_ID ||
+          'anthropic.claude-v2',
+        BEDROCK_TOKEN_CAP:
+          this.node.tryGetContext('bedrockTokenCap') ||
+          process.env.BEDROCK_TOKEN_CAP ||
+          '10000',
+        BEDROCK_SUMMARY_TOKEN_LIMIT:
+          this.node.tryGetContext('bedrockSummaryTokenLimit') ||
+          process.env.BEDROCK_SUMMARY_TOKEN_LIMIT ||
+          '1000',
+        BEDROCK_COST_CAP:
+          this.node.tryGetContext('bedrockCostCap') ||
+          process.env.BEDROCK_COST_CAP ||
+          '0',
+        BEDROCK_COST_PER_1K:
+          this.node.tryGetContext('bedrockCostPer1k') ||
+          process.env.BEDROCK_COST_PER_1K ||
+          '0',
         TOKEN_TABLE_NAME: tokenTable.tableName,
+        AI_PROVIDER:
+          this.node.tryGetContext('aiProvider') ||
+          process.env.AI_PROVIDER ||
+          'bedrock',
       },
     });
 
