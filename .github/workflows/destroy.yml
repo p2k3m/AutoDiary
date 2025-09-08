@@ -31,7 +31,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Build packages
-        run: yarn build
+        run: yarn workspaces foreach -pt --all run build
 
       - name: Read bucket names
         run: |
