@@ -21,7 +21,8 @@ function pad(n: number) {
 }
 
 export function CalendarGrid({ year, month, entryCounts, inkTotals, today, onSelect }: CalendarGridProps) {
-  const data = useMemo(() => entryCounts ?? inkTotals ?? {}, [entryCounts, inkTotals]);
+  // Prefer explicit entry counts but fall back to ink totals if provided.
+  const counts = useMemo(() => entryCounts ?? inkTotals ?? {}, [entryCounts, inkTotals]);
   const showDots = entryCounts !== undefined;
   const cells = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
@@ -35,10 +36,7 @@ export function CalendarGrid({ year, month, entryCounts, inkTotals, today, onSel
   }, [year, month]);
 
   const monthStr = pad(month);
-  const maxCount = useMemo(() => {
-    const values = Object.values(data);
-    return values.length ? Math.max(...values) : 0;
-  }, [data]);
+  const maxCount = useMemo(() => Math.max(0, ...Object.values(counts)), [counts]);
 
   return (
     <div className="grid grid-cols-7 gap-2">
@@ -49,7 +47,7 @@ export function CalendarGrid({ year, month, entryCounts, inkTotals, today, onSel
         const dayStr = pad(day);
         const ymd = `${year}-${monthStr}-${dayStr}`;
         const isToday = today === ymd;
-        const count = data[dayStr] ?? 0;
+        const count = counts[dayStr] ?? 0;
         const ratio = maxCount ? count / maxCount : 0;
         return (
           <button
