@@ -13,15 +13,15 @@ export default function CalendarPage() {
   const today = new Date();
   const year = yyyy ? parseInt(yyyy, 10) : today.getFullYear();
   const month = mm ? parseInt(mm, 10) : today.getMonth() + 1;
-  const [entries, setEntries] = useState<Record<string, number>>({});
+  const [inkTotals, setInkTotals] = useState<Record<string, number>>({});
   const navigate = useNavigate();
   const setCurrentDate = useDiaryStore((s) => s.setCurrentDate);
   const loadEntry = useDiaryStore((s) => s.loadEntry);
 
   useEffect(() => {
     listMonthInk(String(year), pad(month))
-      .then((map) => setEntries(map))
-      .catch(() => setEntries({}));
+      .then((map) => setInkTotals(map))
+      .catch(() => setInkTotals({}));
   }, [year, month]);
 
   const todayYmd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -31,7 +31,7 @@ export default function CalendarPage() {
       <CalendarGrid
         year={year}
         month={month}
-        entries={entries}
+        inkTotals={inkTotals}
         today={todayYmd}
         onSelect={(ymd) => {
           setCurrentDate(ymd);

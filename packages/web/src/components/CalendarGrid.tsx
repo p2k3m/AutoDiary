@@ -3,7 +3,15 @@ import { useMemo } from 'react';
 interface CalendarGridProps {
   year: number;
   month: number; // 1-based month
-  entries: Record<string, number>; // map of day -> ink used/count
+  /**
+   * Map of day -> number of entries. If provided, small counts will render
+   * discrete dots and larger counts a density bar.
+   */
+  entryCounts?: Record<string, number>;
+  /**
+   * Map of day -> ink totals. Always rendered as a density bar.
+   */
+  inkTotals?: Record<string, number>;
   today?: string; // 'YYYY-MM-DD'
   onSelect?: (ymd: string) => void;
 }
@@ -12,7 +20,9 @@ function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
 
-export function CalendarGrid({ year, month, entries, today, onSelect }: CalendarGridProps) {
+export function CalendarGrid({ year, month, entryCounts, inkTotals, today, onSelect }: CalendarGridProps) {
+  const data = useMemo(() => entryCounts ?? inkTotals ?? {}, [entryCounts, inkTotals]);
+  const showDots = entryCounts !== undefined;
   const cells = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
     const start = firstDay.getDay();
@@ -26,9 +36,9 @@ export function CalendarGrid({ year, month, entries, today, onSelect }: Calendar
 
   const monthStr = pad(month);
   const maxCount = useMemo(() => {
-    const values = Object.values(entries);
+    const values = Object.values(data);
     return values.length ? Math.max(...values) : 0;
-  }, [entries]);
+  }, [data]);
 
   return (
     <div className="grid grid-cols-7 gap-2">
@@ -39,7 +49,7 @@ export function CalendarGrid({ year, month, entries, today, onSelect }: Calendar
         const dayStr = pad(day);
         const ymd = `${year}-${monthStr}-${dayStr}`;
         const isToday = today === ymd;
-        const count = entries[dayStr] ?? 0;
+        const count = data[dayStr] ?? 0;
         const ratio = maxCount ? count / maxCount : 0;
         return (
           <button
@@ -52,7 +62,7 @@ export function CalendarGrid({ year, month, entries, today, onSelect }: Calendar
             <span>{day}</span>
             {count > 0 && (
               <div className="mt-1 flex w-full justify-center">
-                {count <= 3 ? (
+                {showDots && count <= 3 ? (
                   <div className="flex gap-0.5">
                     {Array.from({ length: count }).map((_, i) => (
                       <span key={i} className="h-1 w-1 rounded-full bg-blue-500" />
