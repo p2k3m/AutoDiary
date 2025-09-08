@@ -17,9 +17,9 @@ import {
 import { Construct } from 'constructs';
 
 interface AppStackProps extends StackProps {
-  domain: string;
-  hostedZoneId: string;
-  certArn: string;
+  domain?: string;
+  hostedZoneId?: string;
+  certArn?: string;
   hostedZoneName?: string;
 }
 
@@ -28,10 +28,10 @@ export class AppStack extends Stack {
   constructor(scope: Construct, id: string, props: AppStackProps) {
     super(scope, id, props);
 
-    const sanitizedDomain = props.domain.replace(/\./g, '-');
+    const sanitizedDomain = props.domain?.replace(/\./g, '-');
 
     const webBucket = new s3.Bucket(this, 'WebBucket', {
-      bucketName: `web-${sanitizedDomain}`,
+      bucketName: sanitizedDomain ? `web-${sanitizedDomain}` : undefined,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
@@ -49,12 +49,20 @@ export class AppStack extends Stack {
         },
       ],
       priceClass: cf.PriceClass.PRICE_CLASS_100,
-      certificate: acm.Certificate.fromCertificateArn(this, 'Cert', props.certArn),
-      domainNames: [props.domain, `www.${props.domain}`],
+      ...(props.domain && props.certArn
+        ? {
+            certificate: acm.Certificate.fromCertificateArn(
+              this,
+              'Cert',
+              props.certArn
+            ),
+            domainNames: [props.domain, `www.${props.domain}`],
+          }
+        : {}),
     });
 
     const userBucket = new s3.Bucket(this, 'UserBucket', {
-      bucketName: `userdata-${sanitizedDomain}`,
+      bucketName: sanitizedDomain ? `userdata-${sanitizedDomain}` : undefined,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: true,
       cors: [
@@ -65,11 +73,13 @@ export class AppStack extends Stack {
             s3.HttpMethods.HEAD,
             s3.HttpMethods.DELETE,
           ],
-          allowedOrigins: [
-            `https://${props.domain}`,
-            `https://www.${props.domain}`,
-            `https://${distro.distributionDomainName}`,
-          ],
+          allowedOrigins: props.domain
+            ? [
+                `https://${props.domain}`,
+                `https://www.${props.domain}`,
+                `https://${distro.distributionDomainName}`,
+              ]
+            : [`https://${distro.distributionDomainName}`],
           allowedHeaders: ['*'],
           exposedHeaders: ['ETag'],
         },
@@ -77,39 +87,41 @@ export class AppStack extends Stack {
     });
     this.userBucket = userBucket;
 
-    const parts = props.domain.split('.');
-    const rootDomain =
-      props.hostedZoneName ||
-      (parts.length > 2 ? parts.slice(1).join('.') : props.domain);
+    if (props.domain && props.hostedZoneId) {
+      const parts = props.domain.split('.');
+      const rootDomain =
+        props.hostedZoneName ||
+        (parts.length > 2 ? parts.slice(1).join('.') : props.domain);
 
-    const zone = r53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
-      hostedZoneId: props.hostedZoneId,
-      zoneName: rootDomain,
-    });
+      const zone = r53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
+        hostedZoneId: props.hostedZoneId,
+        zoneName: rootDomain,
+      });
 
-    new r53.ARecord(this, 'Alias', {
-      zone,
-      recordName: props.domain,
-      target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
-    });
+      new r53.ARecord(this, 'Alias', {
+        zone,
+        recordName: props.domain,
+        target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
+      });
 
-    new r53.AaaaRecord(this, 'AliasAAAA', {
-      zone,
-      recordName: props.domain,
-      target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
-    });
+      new r53.AaaaRecord(this, 'AliasAAAA', {
+        zone,
+        recordName: props.domain,
+        target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
+      });
 
-    new r53.ARecord(this, 'AliasWWW', {
-      zone,
-      recordName: `www.${props.domain}`,
-      target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
-    });
+      new r53.ARecord(this, 'AliasWWW', {
+        zone,
+        recordName: `www.${props.domain}`,
+        target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
+      });
 
-    new r53.AaaaRecord(this, 'AliasAAAAWWW', {
-      zone,
-      recordName: `www.${props.domain}`,
-      target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
-    });
+      new r53.AaaaRecord(this, 'AliasAAAAWWW', {
+        zone,
+        recordName: `www.${props.domain}`,
+        target: r53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distro)),
+      });
+    }
 
     const userPool = new cognito.UserPool(this, 'UserPool', {
       selfSignUpEnabled: false,
@@ -117,7 +129,7 @@ export class AppStack extends Stack {
 
     const userPoolDomain = userPool.addDomain('HostedUiDomain', {
       cognitoDomain: {
-        domainPrefix: `autodiary-${sanitizedDomain}`,
+        domainPrefix: `autodiary-${sanitizedDomain ?? this.stackName.toLowerCase()}`,
       },
     });
 
@@ -262,7 +274,9 @@ export class AppStack extends Stack {
       value: distro.distributionId,
     });
 
-    new CfnOutput(this, 'Domain', { value: props.domain });
+    if (props.domain) {
+      new CfnOutput(this, 'Domain', { value: props.domain });
+    }
 
     new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
 
