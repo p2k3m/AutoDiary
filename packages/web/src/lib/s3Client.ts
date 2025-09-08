@@ -120,6 +120,8 @@ export interface Settings {
 }
 
 export interface WeeklyData {
+  habits?: { name: string; done: number; total: number; streak: number }[];
+  suggestions?: string[];
   connectorsDigest?: {
     meetingsHours: number;
     topContacts: string[];
@@ -211,18 +213,12 @@ export async function getWeekly(
     );
     const body = await new Response(res.Body as ReadableStream).text();
     if (res.ETag) await setEtag(key, res.ETag);
-    const parsed = JSON.parse(body) as {
-      connectorsDigest?: {
-        meetingsHours: number;
-        topContacts: string[];
-        photosCount: number;
-      };
-      aiSummary?: string;
-      summary?: string;
-    };
+    const parsed = JSON.parse(body) as WeeklyData & { summary?: string };
     return {
       connectorsDigest: parsed.connectorsDigest,
       aiSummary: parsed.aiSummary ?? parsed.summary,
+      habits: parsed.habits,
+      suggestions: parsed.suggestions,
     };
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
