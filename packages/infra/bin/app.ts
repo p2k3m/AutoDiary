@@ -19,11 +19,11 @@ const appStack = new AppStack(app, 'AppStack', {
   hostedZoneName,
 });
 
-const deployWeeklyReview =
-  app.node.tryGetContext('ENABLE_WEEKLY_LAMBDA') === 'true' ||
+const enableWeeklyLambda =
+  app.node.tryGetContext('enableWeeklyLambda') === 'true' ||
   process.env.ENABLE_WEEKLY_LAMBDA === 'true';
 
-if (deployWeeklyReview) {
+if (enableWeeklyLambda) {
   const weekly = new WeeklyReviewStack(app, 'WeeklyReviewStack', {
     bucket: appStack.userBucket,
   });
