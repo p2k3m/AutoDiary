@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { RoutineBar, type RoutineItem } from '../components/RoutineBar';
 import { getSettings, putSettings, type Settings } from '../lib/s3Client';
+import { downloadMonthJSON, downloadMonthMarkdown } from '../lib/export';
 import { useTheme, type Theme } from '../state/useTheme';
+
+function pad(n: number) {
+  return n.toString().padStart(2, '0');
+}
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -10,6 +15,10 @@ export default function SettingsPage() {
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
   const [e2ee, setE2ee] = useState(false);
+  const today = new Date();
+  const [exportMonth, setExportMonth] = useState(
+    `${today.getFullYear()}-${pad(today.getMonth() + 1)}`
+  );
 
   useEffect(() => {
     (async () => {
@@ -109,6 +118,40 @@ export default function SettingsPage() {
           />
           Enable end-to-end encryption
         </label>
+      </section>
+
+      <section className="mb-4">
+        <h2 className="font-semibold">Export</h2>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <input
+            type="month"
+            className="rounded border px-2 py-1 dark:bg-gray-800"
+            value={exportMonth}
+            onChange={(e) => setExportMonth(e.target.value)}
+          />
+          <button
+            className="rounded bg-blue-500 px-2 py-1 text-white"
+            onClick={() => {
+              const [yyyy, mm] = exportMonth.split('-');
+              downloadMonthJSON(yyyy, mm).catch((err) =>
+                console.error('export json failed', err)
+              );
+            }}
+          >
+            Export JSON
+          </button>
+          <button
+            className="rounded bg-green-500 px-2 py-1 text-white"
+            onClick={() => {
+              const [yyyy, mm] = exportMonth.split('-');
+              downloadMonthMarkdown(yyyy, mm).catch((err) =>
+                console.error('export markdown failed', err)
+              );
+            }}
+          >
+            Export Markdown
+          </button>
+        </div>
       </section>
 
       <button
