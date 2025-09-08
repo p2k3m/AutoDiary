@@ -66,11 +66,43 @@ export class WeeklyReviewStack extends Stack {
         this.node.tryGetContext('openaiApiKey') ||
         process.env.OPENAI_API_KEY ||
         '';
+      environment.OPENAI_TOKEN_CAP =
+        this.node.tryGetContext('openaiTokenCap') ||
+        process.env.OPENAI_TOKEN_CAP ||
+        '10000';
+      environment.OPENAI_SUMMARY_TOKEN_LIMIT =
+        this.node.tryGetContext('openaiSummaryTokenLimit') ||
+        process.env.OPENAI_SUMMARY_TOKEN_LIMIT ||
+        '1000';
+      environment.OPENAI_COST_CAP =
+        this.node.tryGetContext('openaiCostCap') ||
+        process.env.OPENAI_COST_CAP ||
+        '0';
+      environment.OPENAI_COST_PER_1K =
+        this.node.tryGetContext('openaiCostPer1k') ||
+        process.env.OPENAI_COST_PER_1K ||
+        '0';
     } else if (aiProvider === 'gemini') {
       environment.GEMINI_API_KEY =
         this.node.tryGetContext('geminiApiKey') ||
         process.env.GEMINI_API_KEY ||
         '';
+      environment.GEMINI_TOKEN_CAP =
+        this.node.tryGetContext('geminiTokenCap') ||
+        process.env.GEMINI_TOKEN_CAP ||
+        '10000';
+      environment.GEMINI_SUMMARY_TOKEN_LIMIT =
+        this.node.tryGetContext('geminiSummaryTokenLimit') ||
+        process.env.GEMINI_SUMMARY_TOKEN_LIMIT ||
+        '1000';
+      environment.GEMINI_COST_CAP =
+        this.node.tryGetContext('geminiCostCap') ||
+        process.env.GEMINI_COST_CAP ||
+        '0';
+      environment.GEMINI_COST_PER_1K =
+        this.node.tryGetContext('geminiCostPer1k') ||
+        process.env.GEMINI_COST_PER_1K ||
+        '0';
     }
 
     const fn = new lambdaNodejs.NodejsFunction(this, 'WeeklyReviewFunction', {
