@@ -32,6 +32,26 @@ flowchart TD
 - AWS CLI configured locally
 - (Optional) [GitHub CLI](https://cli.github.com/) for running workflows
 
+## GitHub configuration
+
+Set the following repository variables and secrets before running the GitHub
+Actions workflows.
+
+### Repository variables
+
+| Variable | Description |
+| --- | --- |
+| `AWS_ACCOUNT_ID` | AWS account to deploy into |
+| `AWS_REGION` | AWS region for all stacks |
+| `DOMAIN_NAME` | Root domain name for the application |
+| `HOSTED_ZONE_ID` | Route53 hosted zone ID for the domain |
+
+### Repository secrets
+
+- `AWS_ROLE_ARN` – IAM role assumed by GitHub Actions to perform deployments.
+- `OPENAI_API_KEY` – optional, required when `AI_PROVIDER` is set to `openai`.
+- `GEMINI_API_KEY` – optional, required when `AI_PROVIDER` is set to `gemini`.
+
 ## Environment variables
 
 | Variable | Description |
@@ -66,11 +86,11 @@ flowchart TD
 | `GEMINI_COST_PER_1K` | Cost in USD per 1K tokens (Gemini) |
 | `BUCKET_NAME` | Target bucket for results |
 
-### Optional connectors
+## Configuring Cognito IdP credentials
 
 The CDK stack can enable social sign-in with Google, Microsoft, or Apple by
 looking up OAuth credentials from AWS Systems Manager Parameter Store. Create
-these parameters in the target account before deploying:
+these parameters in the target AWS account before deploying:
 
 | Parameter | Description |
 | --- | --- |
@@ -137,17 +157,30 @@ Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call
 
 ## CI/CD (GitHub Actions)
 
-The repository includes workflows for deploying and destroying infrastructure.
-Both require repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`,
-`DOMAIN_NAME`, and `HOSTED_ZONE_ID`, and a secret `AWS_ROLE_ARN` used to
-assume deployment roles.
+### Deployment (`deploy.yml`)
 
-- **Deploy infrastructure** (`deploy.yml`): runs on pushes to `main` or on
-  demand. Trigger from the Actions tab or locally with:
-  `gh workflow run deploy.yml`.
-- **Destroy infrastructure** (`destroy.yml`): removes stacks and empties S3
-  buckets. Trigger from the Actions tab or with:
-  `gh workflow run destroy.yml`.
+1. Configure repository variables and secrets as described in [GitHub configuration](#github-configuration).
+2. Push to `main` or run the workflow manually with:
+
+   ```bash
+   gh workflow run deploy.yml
+   ```
+
+3. The workflow runs tests, deploys the CDK stacks, builds the web client, and
+   uploads assets to S3. The CloudFront distribution URL is printed in the
+   workflow summary.
+
+### Teardown (`destroy.yml`)
+
+1. Ensure the same repository variables and secrets are available.
+2. Trigger the workflow from the Actions tab or run:
+
+   ```bash
+   gh workflow run destroy.yml
+   ```
+
+3. The workflow empties S3 buckets and destroys all CDK stacks for the
+   specified domain and hosted zone.
 
 ## Weekly review Lambda
 
