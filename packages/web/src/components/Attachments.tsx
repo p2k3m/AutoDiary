@@ -25,6 +25,7 @@ export function Attachments({
 }: AttachmentsProps) {
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
   const [dragging, setDragging] = useState(false);
   const region = import.meta.env.VITE_REGION as string;
   const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
@@ -94,13 +95,23 @@ export function Attachments({
 
       await uploader.done();
 
-      const url = await getSignedUrl(
-        client,
-        new GetObjectCommand({ Bucket: bucket, Key: key }),
-        { expiresIn: 3600 }
-      );
+      try {
+        const url = await getSignedUrl(
+          client,
+          new GetObjectCommand({ Bucket: bucket, Key: key }),
+          { expiresIn: 3600 }
+        );
+        setUrls((prev) => ({ ...prev, [uuid]: url }));
+        setPending((prev) => {
+          const copy = { ...prev };
+          delete copy[uuid];
+          return copy;
+        });
+      } catch (err) {
+        console.error(err);
+        setPending((prev) => ({ ...prev, [uuid]: true }));
+      }
 
-      setUrls((prev) => ({ ...prev, [uuid]: url }));
       setProgress((prev) => {
         const copy = { ...prev };
         delete copy[uuid];
@@ -157,6 +168,11 @@ export function Attachments({
       delete copy[removed.uuid];
       return copy;
     });
+    setPending((prev) => {
+      const copy = { ...prev };
+      delete copy[removed.uuid];
+      return copy;
+    });
   };
 
   return (
@@ -174,11 +190,10 @@ export function Attachments({
           {existing.map((f, idx) => (
             <li key={f.uuid}>
               {f.name}
-              {urls[f.uuid] &&
-              /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(f.name) ? (
-                <img src={urls[f.uuid]} alt={f.name} className="mt-1 h-20" />
-              ) : (
-                urls[f.uuid] && (
+              {urls[f.uuid] ? (
+                /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(f.name) ? (
+                  <img src={urls[f.uuid]} alt={f.name} className="mt-1 h-20" />
+                ) : (
                   <a
                     href={urls[f.uuid]}
                     target="_blank"
@@ -187,6 +202,12 @@ export function Attachments({
                   >
                     view
                   </a>
+                )
+              ) : (
+                pending[f.uuid] && (
+                  <span className="ml-2 text-gray-500 italic">
+                    will appear when back online
+                  </span>
                 )
               )}
               <button
