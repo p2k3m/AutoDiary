@@ -4,7 +4,9 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { useAuth } from '../state/useAuth';
 import { attachmentKey } from '../lib/s3Client';
@@ -27,6 +29,7 @@ export function Attachments({
   onExistingChange,
 }: AttachmentsProps) {
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [progress, setProgress] = useState<Record<string, number>>({});
   const [dragging, setDragging] = useState(false);
   const region = import.meta.env.VITE_REGION as string;
   const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
@@ -57,32 +60,57 @@ export function Attachments({
   }, [existing, ymd, client, bucket]);
 
   const addFiles = async (list: File[]) => {
-    const added: AttachmentMeta[] = [];
-    const urlMap: Record<string, string> = {};
-    for (const file of list) {
+    const items = list.map((file) => {
       const uuid = crypto.randomUUID();
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
       const key = attachmentKey(ymd, uuid, ext);
-      await client.send(
-        new PutObjectCommand({
+      return { file, uuid, ext, key, name: file.name };
+    });
+
+    if (items.length > 0) {
+      onExistingChange([
+        ...existing,
+        ...items.map(({ name, uuid, ext }) => ({ name, uuid, ext })),
+      ]);
+      setProgress((prev) => ({
+        ...prev,
+        ...Object.fromEntries(items.map(({ uuid }) => [uuid, 0])),
+      }));
+    }
+
+    for (const { file, uuid, ext, key } of items) {
+      const uploader = new Upload({
+        client,
+        params: {
           Bucket: bucket,
           Key: key,
           Body: file,
           ContentType: file.type,
           ServerSideEncryption: 'AES256',
-        })
-      );
+        },
+      });
+
+      uploader.on('httpUploadProgress', (p) => {
+        if (p.total) {
+          const pct = Math.round(((p.loaded ?? 0) / p.total) * 100);
+          setProgress((prev) => ({ ...prev, [uuid]: pct }));
+        }
+      });
+
+      await uploader.done();
+
       const url = await getSignedUrl(
         client,
         new GetObjectCommand({ Bucket: bucket, Key: key }),
         { expiresIn: 3600 }
       );
-      added.push({ name: file.name, uuid, ext });
-      urlMap[uuid] = url;
-    }
-    if (added.length > 0) {
-      onExistingChange([...existing, ...added]);
-      setUrls((prev) => ({ ...prev, ...urlMap }));
+
+      setUrls((prev) => ({ ...prev, [uuid]: url }));
+      setProgress((prev) => {
+        const copy = { ...prev };
+        delete copy[uuid];
+        return copy;
+      });
     }
   };
 
@@ -109,11 +137,22 @@ export function Attachments({
     void addFiles(list);
   };
 
-  const removeExisting = (idx: number) => {
+  const removeExisting = async (idx: number) => {
     const next = [...existing];
     const [removed] = next.splice(idx, 1);
+    const key = attachmentKey(ymd, removed.uuid, removed.ext);
+    try {
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+    } catch (err) {
+      console.error(err);
+    }
     onExistingChange(next);
     setUrls((prev) => {
+      const copy = { ...prev };
+      delete copy[removed.uuid];
+      return copy;
+    });
+    setProgress((prev) => {
       const copy = { ...prev };
       delete copy[removed.uuid];
       return copy;
@@ -152,11 +191,21 @@ export function Attachments({
               )}
               <button
                 type="button"
-                onClick={() => removeExisting(idx)}
+                onClick={() => {
+                  void removeExisting(idx);
+                }}
                 className="ml-2 text-red-600"
               >
                 remove
               </button>
+              {progress[f.uuid] !== undefined && (
+                <div className="mt-1 h-2 w-full bg-gray-200">
+                  <div
+                    className="h-2 bg-blue-500"
+                    style={{ width: `${progress[f.uuid]}%` }}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>
