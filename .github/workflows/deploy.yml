@@ -33,8 +33,8 @@ jobs:
       - name: Build packages
         run: yarn build
 
-      - name: Deploy CDK stacks
-        run: yarn workspace infra cdk deploy AppStack EdgeStack --require-approval never --outputs-file cdk-outputs.json
+      - name: Deploy CDK stack
+        run: yarn workspace infra cdk deploy AppStack --require-approval never --outputs-file cdk-outputs.json
 
       - name: Upload web assets
         run: |
