@@ -64,7 +64,7 @@ jobs:
         if: steps.test.outcome == 'success'
         run: |
           rm -f packages/infra/cdk-outputs.json
-          yarn workspace infra cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c deployWeeklyReview=$ENABLE_WEEKLY_LAMBDA -c bedrockTokenCap=$BEDROCK_TOKEN_CAP -c bedrockCostCap=$BEDROCK_COST_CAP -c bedrockCostPer1k=$BEDROCK_COST_PER_1K -c aiProvider=$AI_PROVIDER -c openaiApiKey=$OPENAI_API_KEY -c geminiApiKey=$GEMINI_API_KEY --outputs-file cdk-outputs.json
+          yarn workspace infra cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c enableWeeklyLambda=$ENABLE_WEEKLY_LAMBDA -c bedrockTokenCap=$BEDROCK_TOKEN_CAP -c bedrockCostCap=$BEDROCK_COST_CAP -c bedrockCostPer1k=$BEDROCK_COST_PER_1K -c aiProvider=$AI_PROVIDER -c openaiApiKey=$OPENAI_API_KEY -c geminiApiKey=$GEMINI_API_KEY --outputs-file cdk-outputs.json
 
       - name: Build web
         if: steps.test.outcome == 'success'

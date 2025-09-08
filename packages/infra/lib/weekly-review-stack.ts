@@ -82,22 +82,29 @@ export class WeeklyReviewStack extends Stack {
       environment,
     });
 
-    // Allow listing and reading objects only under the private/ prefix
     fn.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['s3:ListBucket', 's3:GetObject'],
-        resources: [
-          props.bucket.bucketArn,
-          props.bucket.arnForObjects('private/*'),
-        ],
-        conditions: {
-          StringLike: { 's3:prefix': ['private/*'] },
-        },
+        actions: ['s3:ListBucket'],
+        resources: [props.bucket.bucketArn],
+        conditions: { StringLike: { 's3:prefix': ['private/', 'private/*'] } },
+      })
+    );
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:GetObject'],
+        resources: [props.bucket.arnForObjects('private/*')],
       })
     );
     props.bucket.grantReadWrite(fn, 'private/*/weekly/*');
 
     tokenTable.grantReadWriteData(fn);
+
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: ['*'],
+      })
+    );
 
     const fnUrl = fn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.AWS_IAM,
