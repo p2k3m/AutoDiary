@@ -40,9 +40,6 @@ export class WeeklyReviewStack extends Stack {
         SUMMARY_TOKEN_LIMIT: '1000',
         TOKEN_TABLE_NAME: tokenTable.tableName,
       },
-      bundling: {
-        externalModules: ['@aws-sdk/client-bedrock-runtime'],
-      },
     });
 
     const fnUrl = fn.addFunctionUrl({
