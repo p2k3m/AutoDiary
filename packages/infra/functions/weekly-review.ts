@@ -6,6 +6,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   ListObjectsV2Command,
+  HeadObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import {
@@ -111,6 +112,44 @@ function formatYmd(d: Date): string {
   const mm = (d.getMonth() + 1).toString().padStart(2, '0');
   const dd = d.getDate().toString().padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+async function hasRecentActivity(userId: string): Promise<boolean> {
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(now.getDate() - 7);
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const [yyyy, mm, dd] = formatYmd(d).split('-');
+    const key = `private/${userId}/entries/${yyyy}/${mm}/${dd}.json`;
+    try {
+      await s3.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
+      return true;
+    } catch {
+      // ignore missing objects
+    }
+  }
+
+  try {
+    const list = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: `private/${userId}/connectors/`,
+      })
+    );
+    if (
+      list.Contents?.some(
+        (o) => o.LastModified && o.LastModified.getTime() >= weekAgo.getTime()
+      )
+    )
+      return true;
+  } catch {
+    // ignore
+  }
+
+  return false;
 }
 
 async function checkAndConsumeUsage(
@@ -327,6 +366,8 @@ export async function handler(): Promise<void> {
   } while (continuationToken);
 
   for (const userId of userIds) {
-    await generateReviewForUser(userId);
+    if (await hasRecentActivity(userId)) {
+      await generateReviewForUser(userId);
+    }
   }
 }
