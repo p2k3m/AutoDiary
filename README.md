@@ -2,6 +2,13 @@
 
 AutoDiary is a serverless journaling platform that stores user entries in Amazon S3 and uses AWS Bedrock to generate weekly summaries. The project uses Yarn workspaces to manage the React web client and AWS CDK infrastructure.
 
+## Features
+
+- React web client served from CloudFront with private S3 storage for each user
+- Cognito authentication with optional Google, Microsoft, and Apple connectors
+- AI-generated weekly summaries using Bedrock, OpenAI, or Gemini
+- Infrastructure defined with the AWS CDK and deployed through GitHub Actions
+
 ## Architecture
 
 ```mermaid
@@ -59,9 +66,11 @@ flowchart TD
 | `GEMINI_COST_PER_1K` | Cost in USD per 1K tokens (Gemini) |
 | `BUCKET_NAME` | Target bucket for results |
 
-### Identity provider parameters
+### Optional connectors
 
-The CDK stack looks up OAuth credentials from AWS Systems Manager Parameter Store. Create these parameters in the target account before deploying:
+The CDK stack can enable social sign-in with Google, Microsoft, or Apple by
+looking up OAuth credentials from AWS Systems Manager Parameter Store. Create
+these parameters in the target account before deploying:
 
 | Parameter | Description |
 | --- | --- |
@@ -87,9 +96,9 @@ aws ssm put-parameter --name apple-key-id --type String --value <APPLE_KEY_ID>
 aws ssm put-parameter --name apple-private-key --type SecureString --value "$(cat AuthKey.p8)"
 ```
 
-The `.github/workflows/deploy.yml` workflow reads these parameters during `cdk deploy`. Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call `ssm:GetParameter` (and `kms:Decrypt` for secure strings).
-
-CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `DOMAIN_NAME`, and `HOSTED_ZONE_ID`, and a secret `AWS_ROLE_ARN` for assuming deployment roles.
+The deployment workflow (`deploy.yml`) reads these parameters during `cdk deploy`.
+Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call
+`ssm:GetParameter` (and `kms:Decrypt` for secure strings).
 
 ## Local development
 
@@ -126,14 +135,24 @@ CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `
    yarn build
    ```
 
-## GitHub Actions
+## CI/CD (GitHub Actions)
 
-Two workflows automate infrastructure management:
+The repository includes workflows for deploying and destroying infrastructure.
+Both require repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`,
+`DOMAIN_NAME`, and `HOSTED_ZONE_ID`, and a secret `AWS_ROLE_ARN` used to
+assume deployment roles.
 
-- **Deploy infrastructure** (`deploy.yml`): runs on pushes to `main` or manually with `workflow_dispatch`. Execute locally with `gh workflow run deploy.yml`.
-- **Destroy infrastructure** (`destroy.yml`): removes stacks and empties S3 buckets. Trigger manually from the Actions tab or with `gh workflow run destroy.yml`.
+- **Deploy infrastructure** (`deploy.yml`): runs on pushes to `main` or on
+  demand. Trigger from the Actions tab or locally with:
+  `gh workflow run deploy.yml`.
+- **Destroy infrastructure** (`destroy.yml`): removes stacks and empties S3
+  buckets. Trigger from the Actions tab or with:
+  `gh workflow run destroy.yml`.
 
-## Optional features
+## Weekly review Lambda
 
-The `weekly-review` Lambda summarises each user's week using the configured AI provider and runs every Sunday at 19:00 UTC. Deploy `packages/infra/lib/weekly-review-stack.ts` if this feature is desired; otherwise it can be omitted.
+An optional scheduled Lambda summarises each user's week using the configured
+AI provider. It runs every Sunday at 19:00 UTC and writes summaries back to the
+user's data bucket. Deploy `packages/infra/lib/weekly-review-stack.ts` to
+enable the feature; omit the stack to skip weekly summaries.
 
