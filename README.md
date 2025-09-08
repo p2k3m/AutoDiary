@@ -73,7 +73,7 @@ Create `packages/web/.env` and define:
    yarn test
    ```
 
-5. Build all packages:
+5. Build all packages (runs `yarn workspaces foreach -pt --all run build` under the hood):
 
    ```bash
    yarn build
