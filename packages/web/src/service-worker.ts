@@ -111,29 +111,53 @@ self.addEventListener('fetch', (event) => {
       (req.method === 'POST' && req.url.includes('?uploadId=')))
   ) {
     event.respondWith(
-      fetch(req.clone()).catch(async () => {
-        const db = await openDB(QUEUE_DB, 1, {
-          upgrade(db) {
-            db.createObjectStore('requests', { autoIncrement: true });
-          },
-        });
-        let body: ArrayBuffer | undefined;
-        if (req.method === 'PUT' || req.method === 'POST') {
-          body = await req.clone().arrayBuffer();
+      (async () => {
+        const handleDelete = async () => {
+          const ymd = extractYmd(req.url);
+          if (ymd) {
+            await (await entryDbPromise).delete('entries', ymd);
+            const cache = await caches.open(ENTRY_CACHE);
+            await cache.delete(req);
+            const clients = await self.clients.matchAll();
+            clients.forEach((c) =>
+              c.postMessage({ type: 'entry-deleted', ymd })
+            );
+          }
+        };
+
+        try {
+          const res = await fetch(req.clone());
+          if (req.method === 'DELETE') {
+            await handleDelete();
+          }
+          return res;
+        } catch {
+          if (req.method === 'DELETE') {
+            await handleDelete();
+          }
+          const db = await openDB(QUEUE_DB, 1, {
+            upgrade(db) {
+              db.createObjectStore('requests', { autoIncrement: true });
+            },
+          });
+          let body: ArrayBuffer | undefined;
+          if (req.method === 'PUT' || req.method === 'POST') {
+            body = await req.clone().arrayBuffer();
+          }
+          await db.add('requests', {
+            url: req.url,
+            method: req.method,
+            headers: [...req.headers],
+            body,
+            attempts: 0,
+          });
+          const reg = self.registration as SyncRegistration;
+          if (reg.sync) {
+            await reg.sync.register('s3-sync');
+          }
+          return new Response(null, { status: 202 });
         }
-        await db.add('requests', {
-          url: req.url,
-          method: req.method,
-          headers: [...req.headers],
-          body,
-          attempts: 0,
-        });
-        const reg = self.registration as SyncRegistration;
-        if (reg.sync) {
-          await reg.sync.register('s3-sync');
-        }
-        return new Response(null, { status: 202 });
-      })
+      })()
     );
   }
 });

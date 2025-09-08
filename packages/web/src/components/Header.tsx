@@ -27,7 +27,11 @@ export function Header() {
       void getCachedEntries(DEFAULT_DAYS).then((es) => setEntries(es));
     };
     window.addEventListener('entry-saved', refreshEntries);
-    return () => window.removeEventListener('entry-saved', refreshEntries);
+    window.addEventListener('entry-deleted', refreshEntries);
+    return () => {
+      window.removeEventListener('entry-saved', refreshEntries);
+      window.removeEventListener('entry-deleted', refreshEntries);
+    };
   }, []);
 
   useEffect(() => {
