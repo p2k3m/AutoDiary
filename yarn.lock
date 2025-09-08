@@ -118,6 +118,63 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-sdk/client-bedrock-runtime@npm:^3.883.0":
+  version: 3.883.0
+  resolution: "@aws-sdk/client-bedrock-runtime@npm:3.883.0"
+  dependencies:
+    "@aws-crypto/sha256-browser": "npm:5.2.0"
+    "@aws-crypto/sha256-js": "npm:5.2.0"
+    "@aws-sdk/core": "npm:3.883.0"
+    "@aws-sdk/credential-provider-node": "npm:3.883.0"
+    "@aws-sdk/eventstream-handler-node": "npm:3.873.0"
+    "@aws-sdk/middleware-eventstream": "npm:3.873.0"
+    "@aws-sdk/middleware-host-header": "npm:3.873.0"
+    "@aws-sdk/middleware-logger": "npm:3.876.0"
+    "@aws-sdk/middleware-recursion-detection": "npm:3.873.0"
+    "@aws-sdk/middleware-user-agent": "npm:3.883.0"
+    "@aws-sdk/middleware-websocket": "npm:3.873.0"
+    "@aws-sdk/region-config-resolver": "npm:3.873.0"
+    "@aws-sdk/token-providers": "npm:3.883.0"
+    "@aws-sdk/types": "npm:3.862.0"
+    "@aws-sdk/util-endpoints": "npm:3.879.0"
+    "@aws-sdk/util-user-agent-browser": "npm:3.873.0"
+    "@aws-sdk/util-user-agent-node": "npm:3.883.0"
+    "@smithy/config-resolver": "npm:^4.1.5"
+    "@smithy/core": "npm:^3.9.2"
+    "@smithy/eventstream-serde-browser": "npm:^4.0.5"
+    "@smithy/eventstream-serde-config-resolver": "npm:^4.1.3"
+    "@smithy/eventstream-serde-node": "npm:^4.0.5"
+    "@smithy/fetch-http-handler": "npm:^5.1.1"
+    "@smithy/hash-node": "npm:^4.0.5"
+    "@smithy/invalid-dependency": "npm:^4.0.5"
+    "@smithy/middleware-content-length": "npm:^4.0.5"
+    "@smithy/middleware-endpoint": "npm:^4.1.21"
+    "@smithy/middleware-retry": "npm:^4.1.22"
+    "@smithy/middleware-serde": "npm:^4.0.9"
+    "@smithy/middleware-stack": "npm:^4.0.5"
+    "@smithy/node-config-provider": "npm:^4.1.4"
+    "@smithy/node-http-handler": "npm:^4.1.1"
+    "@smithy/protocol-http": "npm:^5.1.3"
+    "@smithy/smithy-client": "npm:^4.5.2"
+    "@smithy/types": "npm:^4.3.2"
+    "@smithy/url-parser": "npm:^4.0.5"
+    "@smithy/util-base64": "npm:^4.0.0"
+    "@smithy/util-body-length-browser": "npm:^4.0.0"
+    "@smithy/util-body-length-node": "npm:^4.0.0"
+    "@smithy/util-defaults-mode-browser": "npm:^4.0.29"
+    "@smithy/util-defaults-mode-node": "npm:^4.0.29"
+    "@smithy/util-endpoints": "npm:^3.0.7"
+    "@smithy/util-middleware": "npm:^4.0.5"
+    "@smithy/util-retry": "npm:^4.0.7"
+    "@smithy/util-stream": "npm:^4.2.4"
+    "@smithy/util-utf8": "npm:^4.0.0"
+    "@types/uuid": "npm:^9.0.1"
+    tslib: "npm:^2.6.2"
+    uuid: "npm:^9.0.1"
+  checksum: 10c0/b06bb475b9034903985a05fdeca6e7a063ddd029b57d5f721ddc09ca73e365b7b4a8e55747fd69341755db6a4e368683cdd0aafe0efe16a0162100edc7fff586
+  languageName: node
+  linkType: hard
+
 "@aws-sdk/client-cognito-identity@npm:3.883.0":
   version: 3.883.0
   resolution: "@aws-sdk/client-cognito-identity@npm:3.883.0"
@@ -490,6 +547,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-sdk/eventstream-handler-node@npm:3.873.0":
+  version: 3.873.0
+  resolution: "@aws-sdk/eventstream-handler-node@npm:3.873.0"
+  dependencies:
+    "@aws-sdk/types": "npm:3.862.0"
+    "@smithy/eventstream-codec": "npm:^4.0.5"
+    "@smithy/types": "npm:^4.3.2"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/3b794f835258980ba1a7505629931ba8b84bae34cabab6e93325178cba583e70c3a71263cbf03c13bdb52d01c237f9cdd56e07e7bdb1063bbf4ed1b2ba2edbe4
+  languageName: node
+  linkType: hard
+
 "@aws-sdk/middleware-bucket-endpoint@npm:3.873.0":
   version: 3.873.0
   resolution: "@aws-sdk/middleware-bucket-endpoint@npm:3.873.0"
@@ -516,6 +585,18 @@ __metadata:
     "@smithy/types": "npm:^4.3.2"
     tslib: "npm:^2.6.2"
   checksum: 10c0/ac39a82f91636d4ccf5b66e28e2b637bf6911f2c969fc430f80edb8300d36b06effa9255b381124279660fe36170ccfe562205424ce58d1199537c287e557ac8
+  languageName: node
+  linkType: hard
+
+"@aws-sdk/middleware-eventstream@npm:3.873.0":
+  version: 3.873.0
+  resolution: "@aws-sdk/middleware-eventstream@npm:3.873.0"
+  dependencies:
+    "@aws-sdk/types": "npm:3.862.0"
+    "@smithy/protocol-http": "npm:^5.1.3"
+    "@smithy/types": "npm:^4.3.2"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/3a5116ef61b2564b2da74d81ad3984a61f72860538696f2226404088cb664ef27efc9e7b9b01f44398789225253ce4811308dccafb2fd85a71bdcb55e5a750c6
   languageName: node
   linkType: hard
 
@@ -643,6 +724,24 @@ __metadata:
     "@smithy/types": "npm:^4.3.2"
     tslib: "npm:^2.6.2"
   checksum: 10c0/dfb27c854a35f74258f3a8b2fed2250a155496956e6cc2c664bdc444c92fc085c26573837e83e02735adc06a1815f3faa73195bc125bf4563f1b7c91081e6870
+  languageName: node
+  linkType: hard
+
+"@aws-sdk/middleware-websocket@npm:3.873.0":
+  version: 3.873.0
+  resolution: "@aws-sdk/middleware-websocket@npm:3.873.0"
+  dependencies:
+    "@aws-sdk/types": "npm:3.862.0"
+    "@aws-sdk/util-format-url": "npm:3.873.0"
+    "@smithy/eventstream-codec": "npm:^4.0.5"
+    "@smithy/eventstream-serde-browser": "npm:^4.0.5"
+    "@smithy/fetch-http-handler": "npm:^5.1.1"
+    "@smithy/protocol-http": "npm:^5.1.3"
+    "@smithy/signature-v4": "npm:^5.1.3"
+    "@smithy/types": "npm:^4.3.2"
+    "@smithy/util-hex-encoding": "npm:^4.0.0"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/4ea4f78eeb76252b523caee562df5c211149512cb979ec52068eac39099814054a9082e6d06d526320ad6f56c9d358914488d604ad30c6154517590c0b137df8
   languageName: node
   linkType: hard
 
@@ -1735,7 +1834,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@smithy/eventstream-codec@npm:^4.1.0":
+"@smithy/eventstream-codec@npm:^4.0.5, @smithy/eventstream-codec@npm:^4.1.0":
   version: 4.1.0
   resolution: "@smithy/eventstream-codec@npm:4.1.0"
   dependencies:
@@ -2176,7 +2275,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@smithy/util-hex-encoding@npm:^4.1.0":
+"@smithy/util-hex-encoding@npm:^4.0.0, @smithy/util-hex-encoding@npm:^4.1.0":
   version: 4.1.0
   resolution: "@smithy/util-hex-encoding@npm:4.1.0"
   dependencies:
@@ -3666,6 +3765,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "infra@workspace:packages/infra"
   dependencies:
+    "@aws-sdk/client-bedrock-runtime": "npm:^3.883.0"
     "@aws-sdk/client-dynamodb": "npm:^3.883.0"
     "@aws-sdk/client-s3": "npm:^3.883.0"
     "@types/node": "npm:^24.3.1"
