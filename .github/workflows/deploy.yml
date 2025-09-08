@@ -94,15 +94,11 @@ jobs:
         run: |
           WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
           aws s3 sync packages/web/dist s3://$WEB_BUCKET --delete
-
-      - name: Invalidate CloudFront
+      
+      - name: Invalidate CloudFront and report URL
         if: steps.test.outcome == 'success'
         run: |
           DIST_ID=$(jq -r '.AppStack.CloudFrontDistributionId' packages/infra/cdk-outputs.json)
-          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths '/*'
-
-      - name: Add CloudFront URL to summary
-        if: steps.test.outcome == 'success'
-        run: |
           DIST_URL=$(jq -r '.AppStack.CloudFrontDistributionUrl' packages/infra/cdk-outputs.json)
+          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths '/*'
           echo "CloudFront Distribution URL: $DIST_URL" >> $GITHUB_STEP_SUMMARY
