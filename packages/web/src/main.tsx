@@ -17,4 +17,14 @@ if ('serviceWorker' in navigator) {
       })
       .catch((err) => console.error('Service worker registration failed', err));
   });
+
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if ((event.data as { type?: string; ymd?: string })?.type === 'entry-deleted') {
+      window.dispatchEvent(
+        new CustomEvent('entry-deleted', {
+          detail: { ymd: (event.data as { ymd?: string }).ymd },
+        })
+      );
+    }
+  });
 }
