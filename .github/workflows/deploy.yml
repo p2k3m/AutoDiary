@@ -58,7 +58,7 @@ jobs:
           USER_POOL_ID=$(jq -r '.AppStack.UserPoolId' ../infra/cdk-outputs.json)
           USER_POOL_CLIENT_ID=$(jq -r '.AppStack.UserPoolClientId' ../infra/cdk-outputs.json)
           IDENTITY_POOL_ID=$(jq -r '.AppStack.IdentityPoolId' ../infra/cdk-outputs.json)
-          ENTRY_BUCKET=$(jq -r '.AppStack.UserdataBucketName' ../infra/cdk-outputs.json)
+          ENTRY_BUCKET=$(jq -r '.AppStack.UserdataBucketName' ../infra/cdk-outputs.json | tr '.' '-')
           VITE_REGION=$AWS_REGION \
           VITE_DOMAIN=$DOMAIN \
           VITE_USER_POOL_ID=$USER_POOL_ID \
@@ -70,7 +70,7 @@ jobs:
 
       - name: Sync web assets
         run: |
-          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json)
+          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
           aws s3 sync packages/web/dist s3://$WEB_BUCKET --delete
 
       - name: Invalidate CloudFront
