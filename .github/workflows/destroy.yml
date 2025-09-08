@@ -1,4 +1,4 @@
-name: Destroy infrastructure
+name: Destroy
 
 on:
   workflow_dispatch:
@@ -11,49 +11,41 @@ jobs:
   destroy:
     runs-on: ubuntu-latest
     env:
-      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-      DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-      ENABLE_WEEKLY_LAMBDA: ${{ vars.ENABLE_WEEKLY_LAMBDA }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: yarn
 
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Build
+      - name: Build infrastructure
         run: yarn build
 
-      - name: Generate CDK outputs
-        run: yarn workspace infra cdk synth
-        continue-on-error: true
+      - name: Read bucket names
+        run: |
+          aws cloudformation describe-stacks --stack-name AppStack --query "Stacks[0].Outputs" > outputs.json
+          WEB_BUCKET=$(jq -r '.[] | select(.OutputKey=="WebBucketName") | .OutputValue' outputs.json)
+          USER_BUCKET=$(jq -r '.[] | select(.OutputKey=="UserdataBucketName") | .OutputValue' outputs.json)
+          echo "WEB_BUCKET=$WEB_BUCKET" >> $GITHUB_ENV
+          echo "USER_BUCKET=$USER_BUCKET" >> $GITHUB_ENV
 
       - name: Empty S3 buckets
         run: |
-          if [ -f packages/infra/cdk-outputs.json ]; then
-            WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
-            USER_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
-            aws s3 rm "s3://$WEB_BUCKET" --recursive || true
-            aws s3 rm "s3://$USER_BUCKET" --recursive || true
-          else
-            echo "cdk-outputs.json not found. Skipping bucket cleanup."
-          fi
+          aws s3 rm "s3://$WEB_BUCKET" --recursive || true
+          aws s3 rm "s3://$USER_BUCKET" --recursive || true
 
-      - name: Destroy CDK stacks
-        run: yarn workspace infra cdk destroy --all --force -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c enableWeeklyLambda=$ENABLE_WEEKLY_LAMBDA
+      - name: Destroy stacks
+        run: yarn workspace infra cdk destroy AppStack EdgeStack --force --require-approval never
+

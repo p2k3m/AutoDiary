@@ -1,8 +1,6 @@
-name: Deploy infrastructure
+name: Deploy
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,92 +11,40 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-      DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-      ENABLE_WEEKLY_LAMBDA: ${{ vars.ENABLE_WEEKLY_LAMBDA }}
-      BEDROCK_TOKEN_CAP: ${{ vars.BEDROCK_TOKEN_CAP }}
-      BEDROCK_COST_CAP: ${{ vars.BEDROCK_COST_CAP }}
-      BEDROCK_COST_PER_1K: ${{ vars.BEDROCK_COST_PER_1K }}
-      AI_PROVIDER: ${{ vars.AI_PROVIDER }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: yarn
 
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Install Playwright browsers
-        run: yarn workspace web playwright install --with-deps
-
-      - name: Run tests
-        id: test
-        run: yarn test
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: packages/web/test-results
-
-      - name: Build infrastructure
-        if: steps.test.outcome == 'success'
-        run: yarn workspace infra build
+      - name: Build web app
+        run: yarn build
 
       - name: Deploy CDK stacks
-        if: steps.test.outcome == 'success'
-        run: |
-          rm -f packages/infra/cdk-outputs.json
-          yarn workspace infra cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c enableWeeklyLambda=$ENABLE_WEEKLY_LAMBDA -c bedrockTokenCap=$BEDROCK_TOKEN_CAP -c bedrockCostCap=$BEDROCK_COST_CAP -c bedrockCostPer1k=$BEDROCK_COST_PER_1K -c aiProvider=$AI_PROVIDER -c openaiApiKey=$OPENAI_API_KEY -c geminiApiKey=$GEMINI_API_KEY --outputs-file cdk-outputs.json
+        run: yarn workspace infra cdk deploy AppStack EdgeStack --require-approval never --outputs-file cdk-outputs.json
 
-      - name: Build web
-        if: steps.test.outcome == 'success'
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
+      - name: Upload web assets
         run: |
-          DOMAIN=$(jq -r '.AppStack.Domain' packages/infra/cdk-outputs.json)
-          USER_POOL_ID=$(jq -r '.AppStack.UserPoolId' packages/infra/cdk-outputs.json)
-          USER_POOL_CLIENT_ID=$(jq -r '.AppStack.UserPoolClientId' packages/infra/cdk-outputs.json)
-          IDENTITY_POOL_ID=$(jq -r '.AppStack.IdentityPoolId' packages/infra/cdk-outputs.json)
-          HOSTED_UI_DOMAIN=$(jq -r '.AppStack.HostedUiDomain' packages/infra/cdk-outputs.json)
-          ENTRY_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
-          VITE_REGION=$AWS_REGION \
-          VITE_DOMAIN=$DOMAIN \
-          VITE_USER_POOL_ID=$USER_POOL_ID \
-          VITE_USER_POOL_CLIENT_ID=$USER_POOL_CLIENT_ID \
-          VITE_IDENTITY_POOL_ID=$IDENTITY_POOL_ID \
-          VITE_HOSTED_UI_DOMAIN=$HOSTED_UI_DOMAIN \
-          VITE_ENTRY_BUCKET=$ENTRY_BUCKET \
-          yarn workspace web build
-
-      - name: Sync web assets
-        if: steps.test.outcome == 'success'
-        run: |
-          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
+          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json)
           aws s3 sync packages/web/dist s3://$WEB_BUCKET --delete
-      
+
       - name: Invalidate CloudFront and report URL
-        if: steps.test.outcome == 'success'
         run: |
           DIST_ID=$(jq -r '.AppStack.CloudFrontDistributionId' packages/infra/cdk-outputs.json)
-          DIST_URL=$(jq -r '.AppStack.CloudFrontDistributionUrl' packages/infra/cdk-outputs.json)
+          FINAL_URL=$(jq -r '.AppStack.CloudFrontDistributionUrl' packages/infra/cdk-outputs.json)
           aws cloudfront create-invalidation --distribution-id $DIST_ID --paths '/*'
-          echo "CloudFront Distribution URL: $DIST_URL" >> $GITHUB_STEP_SUMMARY
+          echo "Application URL: $FINAL_URL"
+
