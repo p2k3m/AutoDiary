@@ -25,7 +25,7 @@ export default defineConfig({
       VITE_USER_POOL_ID: 'pool',
       VITE_USER_POOL_CLIENT_ID: 'client',
       VITE_IDENTITY_POOL_ID: 'identity',
-      VITE_HOSTED_UI_DOMAIN: 'example.com',
+      VITE_HOSTED_UI_DOMAIN: 'auth.example.com',
       VITE_ENTRY_BUCKET: 'bucket',
       VITE_TEST_MODE: 'true',
     },

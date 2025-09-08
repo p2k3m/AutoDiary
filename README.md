@@ -33,7 +33,7 @@ flowchart TD
 | `VITE_USER_POOL_ID` | Cognito user pool id |
 | `VITE_USER_POOL_CLIENT_ID` | Cognito app client id |
 | `VITE_IDENTITY_POOL_ID` | Cognito identity pool id |
-| `VITE_HOSTED_UI_DOMAIN` | Cognito hosted UI domain |
+| `VITE_HOSTED_UI_DOMAIN` | Cognito hosted UI domain (from `HostedUiDomain` stack output) |
 | `VITE_ENTRY_BUCKET` | S3 bucket for journal entries |
 | `VITE_TEST_MODE` | Set to `true` to enable test fixtures |
 
@@ -86,7 +86,7 @@ CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `
    yarn install
    ```
 
-2. Create `packages/web/.env` and define the `VITE_*` variables listed above.
+2. Create `packages/web/.env` and define the `VITE_*` variables listed above (use the `HostedUiDomain` stack output for `VITE_HOSTED_UI_DOMAIN`).
 
 3. Start the web application:
 

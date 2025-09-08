@@ -58,13 +58,14 @@ jobs:
           USER_POOL_ID=$(jq -r '.AppStack.UserPoolId' ../infra/cdk-outputs.json)
           USER_POOL_CLIENT_ID=$(jq -r '.AppStack.UserPoolClientId' ../infra/cdk-outputs.json)
           IDENTITY_POOL_ID=$(jq -r '.AppStack.IdentityPoolId' ../infra/cdk-outputs.json)
+          HOSTED_UI_DOMAIN=$(jq -r '.AppStack.HostedUiDomain' ../infra/cdk-outputs.json)
           ENTRY_BUCKET=$(jq -r '.AppStack.UserdataBucketName' ../infra/cdk-outputs.json | tr '.' '-')
           VITE_REGION=$AWS_REGION \
           VITE_DOMAIN=$DOMAIN \
           VITE_USER_POOL_ID=$USER_POOL_ID \
           VITE_USER_POOL_CLIENT_ID=$USER_POOL_CLIENT_ID \
           VITE_IDENTITY_POOL_ID=$IDENTITY_POOL_ID \
-          VITE_HOSTED_UI_DOMAIN=$DOMAIN \
+          VITE_HOSTED_UI_DOMAIN=$HOSTED_UI_DOMAIN \
           VITE_ENTRY_BUCKET=$ENTRY_BUCKET \
           yarn build
 
