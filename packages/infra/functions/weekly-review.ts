@@ -173,6 +173,11 @@ async function checkAndConsumeUsage(
   if (tokens + neededTokens > tokenCap || cost + neededCost > costCap)
     return false;
 
+  const ttlSeconds = 90 * 24 * 60 * 60;
+  const expireAt = Math.floor(
+    new Date(`${weekStart}T00:00:00Z`).getTime() / 1000 + ttlSeconds
+  );
+
   await dynamo.send(
     new PutItemCommand({
       TableName: tokenTableName,
@@ -181,6 +186,7 @@ async function checkAndConsumeUsage(
         weekStart: { S: weekStart },
         tokens: { N: String(tokens + neededTokens) },
         cost: { N: String(cost + neededCost) },
+        expireAt: { N: String(expireAt) },
       },
     })
   );

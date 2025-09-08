@@ -35,6 +35,7 @@ export class WeeklyReviewStack extends Stack {
     const tokenTable = new dynamodb.Table(this, 'WeeklyReviewTokens', {
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'expireAt',
     });
 
     const environment: Record<string, string> = {
