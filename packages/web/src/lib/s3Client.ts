@@ -165,6 +165,12 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
   const key = entryKey(ymd);
   const etag = await getEtag(key);
   const normalized = normalizeEntry(body);
+  let inkUsed: number | undefined;
+  try {
+    inkUsed = (JSON.parse(normalized) as { inkUsed?: number }).inkUsed;
+  } catch {
+    inkUsed = undefined;
+  }
   try {
     const res = await client.send(
       new PutObjectCommand({
@@ -172,6 +178,9 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
         Key: key,
         Body: normalized,
         ContentType: 'application/json',
+        ...(inkUsed !== undefined
+          ? { Metadata: { ink: inkUsed.toString() } }
+          : {}),
         ...(etag ? { IfMatch: etag } : {}),
       })
     );
@@ -198,6 +207,25 @@ export async function listMonth(yyyy: string, mm: string): Promise<string[]> {
       .filter((k) => k)
       .map((k) => k.slice(prefix.length).replace(/\.json$/, '')) ?? []
   );
+}
+
+export async function listMonthInk(
+  yyyy: string,
+  mm: string
+): Promise<Record<string, number>> {
+  const client = getClient();
+  const prefix = `${useAuth.getState().userPrefix ?? ''}/entries/${yyyy}/${mm}/`;
+  const res = await client.send(
+    new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix })
+  );
+  const map: Record<string, number> = {};
+  res.Contents?.forEach((obj) => {
+    if (obj.Key) {
+      const day = obj.Key.slice(prefix.length).replace(/\.json$/, '');
+      map[day] = obj.Size ?? 0;
+    }
+  });
+  return map;
 }
 
 export async function getWeekly(

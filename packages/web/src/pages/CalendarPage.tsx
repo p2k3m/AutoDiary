@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CalendarGrid } from '../components/CalendarGrid';
-import { listMonth, getEntry } from '../lib/s3Client';
+import { listMonthInk } from '../lib/s3Client';
 import { useDiaryStore } from '../state/useDiaryStore';
 
 function pad(n: number) {
@@ -19,26 +19,8 @@ export default function CalendarPage() {
   const loadEntry = useDiaryStore((s) => s.loadEntry);
 
   useEffect(() => {
-    listMonth(String(year), pad(month))
-      .then(async (days) => {
-        const pairs = await Promise.all(
-          days.map(async (d) => {
-            const ymd = `${year}-${pad(month)}-${d}`;
-            try {
-              const raw = await getEntry(ymd);
-              if (raw) {
-                const parsed = JSON.parse(raw) as { inkUsed?: number; text?: string };
-                const ink = parsed.inkUsed ?? parsed.text?.length ?? 0;
-                return [d, ink] as [string, number];
-              }
-            } catch {
-              // ignore
-            }
-            return [d, 0] as [string, number];
-          })
-        );
-        setEntries(Object.fromEntries(pairs));
-      })
+    listMonthInk(String(year), pad(month))
+      .then((map) => setEntries(map))
       .catch(() => setEntries({}));
   }, [year, month]);
 
