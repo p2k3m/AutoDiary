@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "test": "echo 'no tests in infra'"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",
