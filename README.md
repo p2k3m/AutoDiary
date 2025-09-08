@@ -45,6 +45,11 @@ Actions workflows.
 | `AWS_REGION` | AWS region for all stacks |
 | `DOMAIN_NAME` | Root domain name for the application |
 | `HOSTED_ZONE_ID` | Route53 hosted zone ID for the domain |
+| `AI_PROVIDER` | AI provider for weekly summaries (`bedrock`, `openai`, or `gemini`) |
+| `ENABLE_WEEKLY_LAMBDA` | Set to `true` to deploy the scheduled summary Lambda |
+| `BEDROCK_TOKEN_CAP` | Maximum Bedrock tokens per user per week |
+| `BEDROCK_COST_CAP` | Maximum Bedrock cost per user per week (USD) |
+| `BEDROCK_COST_PER_1K` | Bedrock cost in USD per 1K tokens |
 
 ### Repository secrets
 
