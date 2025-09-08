@@ -8,6 +8,7 @@ import { WeeklyReviewStack } from '../lib/weekly-review-stack.js';
 const app = new App();
 const domain = app.node.tryGetContext('domain') || 'example.com';
 const hostedZoneId = app.node.tryGetContext('hostedZoneId') || 'Z2ABCDEFG';
+const hostedZoneName = app.node.tryGetContext('hostedZoneName');
 
 const edge = new EdgeStack(app, 'EdgeStack', { domain });
 
@@ -15,6 +16,7 @@ const appStack = new AppStack(app, 'AppStack', {
   domain,
   hostedZoneId,
   certArn: edge.certArn,
+  hostedZoneName,
 });
 
 const deployWeeklyReview =
