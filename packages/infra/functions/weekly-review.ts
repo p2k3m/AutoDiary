@@ -5,6 +5,7 @@ import {
 import {
   GetObjectCommand,
   PutObjectCommand,
+  ListObjectsV2Command,
   S3Client,
 } from '@aws-sdk/client-s3';
 
@@ -24,10 +25,6 @@ export interface WeeklyReviewResult {
     photosCount: number;
   };
   aiSummary?: string;
-}
-
-interface WeeklyReviewEvent {
-  userId: string;
 }
 
 const modelId = process.env.BEDROCK_MODEL_ID ?? '';
@@ -66,7 +63,7 @@ function formatYmd(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export async function handler(event: WeeklyReviewEvent): Promise<WeeklyReviewResult> {
+async function generateReviewForUser(userId: string): Promise<void> {
   const start = startOfWeek(new Date());
   const ymds: string[] = [];
   for (let i = 0; i < 7; i++) {
@@ -78,7 +75,7 @@ export async function handler(event: WeeklyReviewEvent): Promise<WeeklyReviewRes
   const entries: Record<string, unknown>[] = [];
   for (const ymd of ymds) {
     const [yyyy, mm, dd] = ymd.split('-');
-    const key = `${event.userId}/entries/${yyyy}/${mm}/${dd}.json`;
+    const key = `private/${userId}/entries/${yyyy}/${mm}/${dd}.json`;
     try {
       const obj = await s3.send(
         new GetObjectCommand({ Bucket: bucketName, Key: key })
@@ -144,7 +141,7 @@ export async function handler(event: WeeklyReviewEvent): Promise<WeeklyReviewRes
     const obj = await s3.send(
       new GetObjectCommand({
         Bucket: bucketName,
-        Key: `${event.userId}/connectors/summary.json`,
+        Key: `private/${userId}/connectors/summary.json`,
       })
     );
     const body = await obj.Body?.transformToString();
@@ -153,7 +150,7 @@ export async function handler(event: WeeklyReviewEvent): Promise<WeeklyReviewRes
     // ignore if missing
   }
 
-  const used = tokenUsage[event.userId] ?? 0;
+  const used = tokenUsage[userId] ?? 0;
   const prompt = 'Write a short summary of this week.';
   const needed = estimateTokens(prompt) + summaryTokenLimit;
 
@@ -178,12 +175,12 @@ export async function handler(event: WeeklyReviewEvent): Promise<WeeklyReviewRes
     const response = await client.send(command);
     const completion = JSON.parse(new TextDecoder().decode(response.body));
     aiSummary = completion.output_text ?? '';
-    tokenUsage[event.userId] = used + needed;
+    tokenUsage[userId] = used + needed;
   }
 
   const yyyy = start.getFullYear().toString();
   const ww = getIsoWeek(start).toString().padStart(2, '0');
-  const weeklyKey = `${event.userId}/weekly/${yyyy}-${ww}.json`;
+  const weeklyKey = `private/${userId}/weekly/${yyyy}-${ww}.json`;
   const result: WeeklyReviewResult = {
     habits,
     suggestions,
@@ -199,6 +196,22 @@ export async function handler(event: WeeklyReviewEvent): Promise<WeeklyReviewRes
       ContentType: 'application/json',
     })
   );
+}
 
-  return result;
+export async function handler(): Promise<void> {
+  const list = await s3.send(
+    new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: 'private/',
+      Delimiter: '/',
+    })
+  );
+  const userIds =
+    list.CommonPrefixes?.map((cp) => cp.Prefix?.split('/')[1]).filter(
+      (id): id is string => !!id
+    ) ?? [];
+
+  for (const userId of userIds) {
+    await generateReviewForUser(userId);
+  }
 }
