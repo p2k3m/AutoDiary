@@ -2,10 +2,19 @@ import { listMonth, getEntry } from './s3Client';
 
 async function gatherMonth(yyyy: string, mm: string) {
   const days = await listMonth(yyyy, mm);
+  const results = await Promise.all(
+    days.map(async (dd) => {
+      const ymd = `${yyyy}-${mm}-${dd}`;
+      try {
+        const body = await getEntry(ymd);
+        return { ymd, body };
+      } catch {
+        return { ymd, body: null };
+      }
+    })
+  );
   const entries: Record<string, unknown> = {};
-  for (const dd of days) {
-    const ymd = `${yyyy}-${mm}-${dd}`;
-    const body = await getEntry(ymd);
+  for (const { ymd, body } of results) {
     if (body) {
       try {
         entries[ymd] = JSON.parse(body);
