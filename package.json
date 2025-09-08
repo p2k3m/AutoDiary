@@ -1,8 +1,7 @@
 {
   "private": true,
   "workspaces": [
-    "packages/web",
-    "packages/infra"
+    "packages/*"
   ],
   "scripts": {
     "build": "yarn workspaces foreach -At run build",

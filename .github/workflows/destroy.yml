@@ -55,5 +55,4 @@ jobs:
           fi
 
       - name: Destroy CDK stacks
-        working-directory: packages/infra
-        run: yarn cdk destroy --all --force -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID
+        run: yarn workspace infra cdk destroy --all --force -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID

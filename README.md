@@ -114,6 +114,18 @@ CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `
    yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
    ```
 
+5. Run tests across all packages:
+
+   ```bash
+   yarn test
+   ```
+
+6. Build all packages:
+
+   ```bash
+   yarn build
+   ```
+
 ## GitHub Actions
 
 Two workflows automate infrastructure management:
