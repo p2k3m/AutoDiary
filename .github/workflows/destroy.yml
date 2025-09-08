@@ -39,12 +39,20 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Generate CDK outputs
+        run: yarn workspace infra cdk synth
+        continue-on-error: true
+
       - name: Empty S3 buckets
         run: |
-          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
-          USER_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
-          aws s3 rm "s3://$WEB_BUCKET" --recursive || true
-          aws s3 rm "s3://$USER_BUCKET" --recursive || true
+          if [ -f packages/infra/cdk-outputs.json ]; then
+            WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
+            USER_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
+            aws s3 rm "s3://$WEB_BUCKET" --recursive || true
+            aws s3 rm "s3://$USER_BUCKET" --recursive || true
+          else
+            echo "cdk-outputs.json not found. Skipping bucket cleanup."
+          fi
 
       - name: Destroy CDK stacks
         working-directory: packages/infra
