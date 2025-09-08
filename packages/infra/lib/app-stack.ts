@@ -96,6 +96,12 @@ export class AppStack extends Stack {
       selfSignUpEnabled: false,
     });
 
+    const userPoolDomain = userPool.addDomain('HostedUiDomain', {
+      cognitoDomain: {
+        domainPrefix: `autodiary-${sanitizedDomain}`,
+      },
+    });
+
     const googleClientId = ssm.StringParameter.valueForStringParameter(
       this,
       'google-client-id'
@@ -243,6 +249,10 @@ export class AppStack extends Stack {
 
     new CfnOutput(this, 'UserPoolClientId', {
       value: userPoolClient.userPoolClientId,
+    });
+
+    new CfnOutput(this, 'HostedUiDomain', {
+      value: userPoolDomain.domainName,
     });
 
     new CfnOutput(this, 'IdentityPoolId', { value: identityPool.ref });
