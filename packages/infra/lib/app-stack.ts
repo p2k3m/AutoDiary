@@ -39,7 +39,10 @@ export class AppStack extends Stack {
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.HEAD],
-          allowedOrigins: [`https://${props.domain}`],
+          allowedOrigins: [
+            `https://${props.domain}`,
+            `https://www.${props.domain}`,
+          ],
           allowedHeaders: ['*'],
         },
       ],
