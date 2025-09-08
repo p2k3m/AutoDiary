@@ -7,6 +7,7 @@ import {
   aws_events as events,
   aws_events_targets as targets,
   aws_s3 as s3,
+  aws_dynamodb as dynamodb,
   CfnOutput,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -21,6 +22,11 @@ export class WeeklyReviewStack extends Stack {
   constructor(scope: Construct, id: string, props: WeeklyReviewStackProps) {
     super(scope, id, props);
 
+    const tokenTable = new dynamodb.Table(this, 'WeeklyReviewTokens', {
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+    });
+
     const fn = new lambdaNodejs.NodejsFunction(this, 'WeeklyReviewFunction', {
       functionName: 'weekly-review',
       entry: path.join(__dirname, '../functions/weekly-review.ts'),
@@ -32,6 +38,7 @@ export class WeeklyReviewStack extends Stack {
         BEDROCK_MODEL_ID: 'anthropic.claude-v2',
         USER_TOKEN_CAP: '10000',
         SUMMARY_TOKEN_LIMIT: '1000',
+        TOKEN_TABLE_NAME: tokenTable.tableName,
       },
       bundling: {
         externalModules: ['@aws-sdk/client-bedrock-runtime'],
@@ -45,6 +52,8 @@ export class WeeklyReviewStack extends Stack {
     props.bucket.grantRead(fn, 'private/*/entries/*');
     props.bucket.grantRead(fn, 'private/*/connectors/*');
     props.bucket.grantReadWrite(fn, 'private/*/weekly/*');
+
+    tokenTable.grantReadWriteData(fn);
 
     fn.addToRolePolicy(
       new iam.PolicyStatement({
