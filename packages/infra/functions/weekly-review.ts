@@ -1,8 +1,4 @@
 import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} from '@aws-sdk/client-bedrock-runtime';
-import {
   GetObjectCommand,
   PutObjectCommand,
   ListObjectsV2Command,
@@ -14,8 +10,6 @@ import {
   GetItemCommand,
   PutItemCommand,
 } from '@aws-sdk/client-dynamodb';
-import OpenAI from 'openai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface HabitStat {
   name: string;
@@ -77,9 +71,6 @@ const { modelId, tokenCap, summaryTokenLimit, costCap, costPer1k } =
   providerConfigs[aiProvider];
 const bucketName = process.env.BUCKET_NAME ?? '';
 const tokenTableName = process.env.TOKEN_TABLE_NAME ?? '';
-const bedrockClient = new BedrockRuntimeClient({});
-const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? '' });
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 const s3 = new S3Client({});
 const dynamo = new DynamoDBClient({});
 
@@ -290,6 +281,10 @@ async function generateReviewForUser(userId: string): Promise<void> {
   if (await checkAndConsumeUsage(userId, weekStartStr, neededTokens, neededCost)) {
     switch (aiProvider) {
       case 'openai': {
+        const { default: OpenAI } = await import('openai');
+        const openaiClient = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY ?? '',
+        });
         const completion = await openaiClient.chat.completions.create({
           model: modelId,
           messages: [{ role: 'user', content: prompt }],
@@ -299,6 +294,10 @@ async function generateReviewForUser(userId: string): Promise<void> {
         break;
       }
       case 'gemini': {
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(
+          process.env.GEMINI_API_KEY ?? ''
+        );
         const model = genAI.getGenerativeModel({ model: modelId });
         const result = await model.generateContent({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -308,6 +307,11 @@ async function generateReviewForUser(userId: string): Promise<void> {
         break;
       }
       default: {
+        const {
+          BedrockRuntimeClient,
+          InvokeModelCommand,
+        } = await import('@aws-sdk/client-bedrock-runtime');
+        const bedrockClient = new BedrockRuntimeClient({});
         const command = new InvokeModelCommand({
           modelId,
           contentType: 'application/json',
