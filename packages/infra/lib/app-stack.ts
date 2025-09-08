@@ -20,6 +20,7 @@ interface AppStackProps extends StackProps {
   domain: string;
   hostedZoneId: string;
   certArn: string;
+  hostedZoneName?: string;
 }
 
 export class AppStack extends Stack {
@@ -67,9 +68,14 @@ export class AppStack extends Stack {
       domainNames: [props.domain, `www.${props.domain}`],
     });
 
+    const parts = props.domain.split('.');
+    const rootDomain =
+      props.hostedZoneName ||
+      (parts.length > 2 ? parts.slice(1).join('.') : props.domain);
+
     const zone = r53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
       hostedZoneId: props.hostedZoneId,
-      zoneName: props.domain,
+      zoneName: rootDomain,
     });
 
     new r53.ARecord(this, 'Alias', {
