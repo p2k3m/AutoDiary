@@ -20,6 +20,7 @@ const APP_SHELL_CACHE = 'app-shell-v1';
 const ENTRY_CACHE = 'entry-cache-v1';
 const QUEUE_DB = 's3-write-queue';
 const ENTRY_DB = 'entry-cache';
+const MAX_RETRY_ATTEMPTS = 3;
 const entryDbPromise = openDB(ENTRY_DB, 1, {
   upgrade(db) {
     db.createObjectStore('entries');
@@ -123,6 +124,7 @@ self.addEventListener('fetch', (event) => {
           method: req.method,
           headers: [...req.headers],
           body,
+          attempts: 0,
         });
         const reg = self.registration as SyncRegistration;
         if (reg.sync) {
@@ -184,11 +186,12 @@ async function replayQueue() {
   const store = tx.objectStore('requests');
   let cursor = await store.openCursor();
   while (cursor) {
-    const { url, headers, body, method = 'PUT' } = cursor.value as {
+    const { url, headers, body, method = 'PUT', attempts = 0 } = cursor.value as {
       url: string;
       headers: [string, string][];
       body?: ArrayBuffer;
       method?: string;
+      attempts?: number;
     };
     try {
       await fetch(url, {
@@ -198,10 +201,26 @@ async function replayQueue() {
       });
       await cursor.delete();
     } catch {
-      // network issue, stop processing
-      break;
+      const nextAttempts = attempts + 1;
+      if (nextAttempts >= MAX_RETRY_ATTEMPTS) {
+        await cursor.delete();
+      } else {
+        await cursor.update({
+          url,
+          headers,
+          body,
+          method,
+          attempts: nextAttempts,
+        });
+      }
     }
     cursor = await cursor.continue();
   }
   await tx.done;
+  if ((await db.count('requests')) > 0) {
+    const reg = self.registration as SyncRegistration;
+    if (reg.sync) {
+      await reg.sync.register('s3-sync');
+    }
+  }
 }
