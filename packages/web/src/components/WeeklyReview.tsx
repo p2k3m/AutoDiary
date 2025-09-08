@@ -59,6 +59,7 @@ export function WeeklyReview() {
       }
 
       const limit = pLimit(5);
+      const entryCache = new Map<string, string | null>();
       const entryPromises = [
         ...ymds.map((d) => limit(() => getEntry(d))),
         ...prevYmds.map((d) => limit(() => getEntry(d))),
@@ -66,6 +67,8 @@ export function WeeklyReview() {
       const entries = await Promise.all(entryPromises);
       const raw = entries.slice(0, ymds.length);
       const prevRaw = entries.slice(ymds.length);
+      ymds.forEach((d, idx) => entryCache.set(d, raw[idx] ?? null));
+      prevYmds.forEach((d, idx) => entryCache.set(d, prevRaw[idx] ?? null));
       const map = new Map<string, {
         done: number;
         total: number;
@@ -144,6 +147,28 @@ export function WeeklyReview() {
         'Saturday',
         'Sunday',
       ];
+
+      const allPrevDates = new Set<string>();
+      for (const days of missesThisWeek.values()) {
+        for (const day of days) {
+          const checkDate = new Date(start);
+          checkDate.setDate(start.getDate() + day);
+          for (let i = 1; i < 5; i++) {
+            const d = new Date(checkDate);
+            d.setDate(checkDate.getDate() - 7 * i);
+            const y = formatYmd(d);
+            if (!entryCache.has(y)) allPrevDates.add(y);
+          }
+        }
+      }
+
+      const fetchedPrev = await Promise.all(
+        Array.from(allPrevDates).map((d) => limit(() => getEntry(d)))
+      );
+      Array.from(allPrevDates).forEach((d, idx) =>
+        entryCache.set(d, fetchedPrev[idx] ?? null)
+      );
+
       const suggestions: Tip[] = [];
       for (const [habit, days] of missesThisWeek.entries()) {
         for (const day of days) {
@@ -155,11 +180,9 @@ export function WeeklyReview() {
             d.setDate(checkDate.getDate() - 7 * i);
             prevDates.push(formatYmd(d));
           }
-          const prevEntries = await Promise.all(
-            prevDates.map((d) => limit(() => getEntry(d)))
-          );
           let count = 1;
-          for (const prev of prevEntries) {
+          for (const d of prevDates) {
+            const prev = entryCache.get(d);
             if (!prev) break;
             const e = JSON.parse(prev);
             const prevRoutines: { text: string; done: boolean }[] =
