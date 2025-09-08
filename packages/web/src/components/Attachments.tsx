@@ -74,50 +74,52 @@ export function Attachments({
       }));
     }
 
-    for (const { file, uuid, key } of items) {
-      const uploader = new Upload({
-        client,
-        params: {
-          Bucket: bucket,
-          Key: key,
-          Body: file,
-          ContentType: file.type,
-          ServerSideEncryption: 'AES256',
-        },
-      });
-
-      uploader.on('httpUploadProgress', (p) => {
-        if (p.total) {
-          const pct = Math.round(((p.loaded ?? 0) / p.total) * 100);
-          setProgress((prev) => ({ ...prev, [uuid]: pct }));
-        }
-      });
-
-      await uploader.done();
-
-      try {
-        const url = await getSignedUrl(
+    await Promise.all(
+      items.map(async ({ file, uuid, key }) => {
+        const uploader = new Upload({
           client,
-          new GetObjectCommand({ Bucket: bucket, Key: key }),
-          { expiresIn: 3600 }
-        );
-        setUrls((prev) => ({ ...prev, [uuid]: url }));
-        setPending((prev) => {
-          const copy = { ...prev };
-          delete copy[uuid];
-          return copy;
+          params: {
+            Bucket: bucket,
+            Key: key,
+            Body: file,
+            ContentType: file.type,
+            ServerSideEncryption: 'AES256',
+          },
         });
-      } catch (err) {
-        console.error(err);
-        setPending((prev) => ({ ...prev, [uuid]: true }));
-      }
 
-      setProgress((prev) => {
-        const copy = { ...prev };
-        delete copy[uuid];
-        return copy;
-      });
-    }
+        uploader.on('httpUploadProgress', (p) => {
+          if (p.total) {
+            const pct = Math.round(((p.loaded ?? 0) / p.total) * 100);
+            setProgress((prev) => ({ ...prev, [uuid]: pct }));
+          }
+        });
+
+        await uploader.done();
+
+        try {
+          const url = await getSignedUrl(
+            client,
+            new GetObjectCommand({ Bucket: bucket, Key: key }),
+            { expiresIn: 3600 }
+          );
+          setUrls((prev) => ({ ...prev, [uuid]: url }));
+          setPending((prev) => {
+            const copy = { ...prev };
+            delete copy[uuid];
+            return copy;
+          });
+        } catch (err) {
+          console.error(err);
+          setPending((prev) => ({ ...prev, [uuid]: true }));
+        } finally {
+          setProgress((prev) => {
+            const copy = { ...prev };
+            delete copy[uuid];
+            return copy;
+          });
+        }
+      })
+    );
   };
 
   const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,8 +157,7 @@ export function Attachments({
         window.alert('Deletion queued for sync when back online.');
       }
 
-      const next = [...existing];
-      next.splice(idx, 1);
+      const next = existing.filter((_, i) => i !== idx);
       onExistingChange(next);
 
       setUrls((prev) => {
