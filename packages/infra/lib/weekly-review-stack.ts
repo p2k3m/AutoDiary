@@ -7,6 +7,7 @@ import {
   aws_events as events,
   aws_events_targets as targets,
   aws_s3 as s3,
+  CfnOutput,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -37,7 +38,9 @@ export class WeeklyReviewStack extends Stack {
       },
     });
 
-    fn.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.AWS_IAM });
+    const fnUrl = fn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.AWS_IAM,
+    });
 
     props.bucket.grantReadWrite(fn);
 
@@ -55,5 +58,7 @@ export class WeeklyReviewStack extends Stack {
     });
 
     rule.addTarget(new targets.LambdaFunction(fn));
+
+    new CfnOutput(this, 'WeeklyReviewFunctionUrl', { value: fnUrl.url });
   }
 }

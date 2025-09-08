@@ -23,6 +23,7 @@ interface AppStackProps extends StackProps {
 }
 
 export class AppStack extends Stack {
+  public readonly userBucket: s3.Bucket;
   constructor(scope: Construct, id: string, props: AppStackProps) {
     super(scope, id, props);
 
@@ -43,6 +44,7 @@ export class AppStack extends Stack {
         },
       ],
     });
+    this.userBucket = userBucket;
 
     const distro = new cf.Distribution(this, 'Distribution', {
       defaultBehavior: {

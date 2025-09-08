@@ -3,6 +3,7 @@ import 'source-map-support/register';
 import { App } from 'aws-cdk-lib';
 import { EdgeStack } from '../lib/edge-stack.js';
 import { AppStack } from '../lib/app-stack.js';
+import { WeeklyReviewStack } from '../lib/weekly-review-stack.js';
 
 const app = new App();
 const domain = app.node.tryGetContext('domain') || 'example.com';
@@ -10,8 +11,18 @@ const hostedZoneId = app.node.tryGetContext('hostedZoneId') || 'Z2ABCDEFG';
 
 const edge = new EdgeStack(app, 'EdgeStack', { domain });
 
-new AppStack(app, 'AppStack', {
+const appStack = new AppStack(app, 'AppStack', {
   domain,
   hostedZoneId,
   certArn: edge.certArn,
 });
+
+const deployWeeklyReview =
+  app.node.tryGetContext('deployWeeklyReview') === 'true' ||
+  process.env.DEPLOY_WEEKLY_REVIEW === 'true';
+
+if (deployWeeklyReview) {
+  new WeeklyReviewStack(app, 'WeeklyReviewStack', {
+    bucket: appStack.userBucket,
+  });
+}
