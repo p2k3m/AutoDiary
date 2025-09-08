@@ -77,3 +77,8 @@ jobs:
         run: |
           DIST_ID=$(jq -r '.AppStack.CloudFrontDistributionId' packages/infra/cdk-outputs.json)
           aws cloudfront create-invalidation --distribution-id $DIST_ID --paths '/*'
+
+      - name: Add CloudFront URL to summary
+        run: |
+          DIST_URL=$(jq -r '.AppStack.CloudFrontDistributionUrl' packages/infra/cdk-outputs.json)
+          echo "CloudFront Distribution URL: $DIST_URL" >> $GITHUB_STEP_SUMMARY
