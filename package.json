@@ -1,8 +1,11 @@
 {
   "private": true,
-  "workspaces": ["packages/web", "packages/infra"],
+  "workspaces": [
+    "packages/web",
+    "packages/infra"
+  ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "build": "yarn workspaces foreach -At run build",
+    "test": "yarn workspaces foreach -At run test"
   }
 }

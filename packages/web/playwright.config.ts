@@ -17,7 +17,7 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: 'npm run dev -- --port=5173',
+    command: 'yarn dev --port=5173',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     env: {

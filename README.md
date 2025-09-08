@@ -1,6 +1,6 @@
 # AutoDiary
 
-AutoDiary is a serverless journaling platform that stores user entries in Amazon S3 and uses AWS Bedrock to generate weekly summaries. The project uses npm workspaces to manage the React web client and AWS CDK infrastructure.
+AutoDiary is a serverless journaling platform that stores user entries in Amazon S3 and uses AWS Bedrock to generate weekly summaries. The project uses Yarn workspaces to manage the React web client and AWS CDK infrastructure.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ flowchart TD
 ## Prerequisites
 
 - Node.js 20+
-- npm 9+
+- Yarn 4+
 - AWS account with permissions to deploy CDK stacks
 - AWS CLI configured locally
 - (Optional) [GitHub CLI](https://cli.github.com/) for running workflows
@@ -53,7 +53,7 @@ CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `
 1. Install dependencies:
 
    ```bash
-   npm install
+   yarn install
    ```
 
 2. Create `packages/web/.env` and define the `VITE_*` variables listed above.
@@ -61,14 +61,14 @@ CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `
 3. Start the web application:
 
    ```bash
-   npm run dev --workspace web
+   yarn workspace web dev
    ```
 
 4. To work on infrastructure:
 
    ```bash
-   npm run build --workspace infra
-   npm run cdk --workspace infra deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
+   yarn workspace infra build
+   yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
    ```
 
 ## GitHub Actions
