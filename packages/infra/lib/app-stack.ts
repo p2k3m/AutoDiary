@@ -35,29 +35,6 @@ export class AppStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
-    const userBucket = new s3.Bucket(this, 'UserBucket', {
-      bucketName: `userdata-${sanitizedDomain}`,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      versioned: true,
-      cors: [
-        {
-          allowedMethods: [
-            s3.HttpMethods.GET,
-            s3.HttpMethods.PUT,
-            s3.HttpMethods.HEAD,
-            s3.HttpMethods.DELETE,
-          ],
-          allowedOrigins: [
-            `https://${props.domain}`,
-            `https://www.${props.domain}`,
-          ],
-          allowedHeaders: ['*'],
-          exposedHeaders: ['ETag'],
-        },
-      ],
-    });
-    this.userBucket = userBucket;
-
     const distro = new cf.Distribution(this, 'Distribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket),
@@ -75,6 +52,30 @@ export class AppStack extends Stack {
       certificate: acm.Certificate.fromCertificateArn(this, 'Cert', props.certArn),
       domainNames: [props.domain, `www.${props.domain}`],
     });
+
+    const userBucket = new s3.Bucket(this, 'UserBucket', {
+      bucketName: `userdata-${sanitizedDomain}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      versioned: true,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+            s3.HttpMethods.DELETE,
+          ],
+          allowedOrigins: [
+            `https://${props.domain}`,
+            `https://www.${props.domain}`,
+            `https://${distro.distributionDomainName}`,
+          ],
+          allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
+        },
+      ],
+    });
+    this.userBucket = userBucket;
 
     const parts = props.domain.split('.');
     const rootDomain =
