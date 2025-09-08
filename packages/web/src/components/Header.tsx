@@ -23,6 +23,14 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    const refreshEntries = () => {
+      void getCachedEntries(DEFAULT_DAYS).then((es) => setEntries(es));
+    };
+    window.addEventListener('entry-saved', refreshEntries);
+    return () => window.removeEventListener('entry-saved', refreshEntries);
+  }, []);
+
+  useEffect(() => {
     if (!query) {
       setResults(entries);
       return;

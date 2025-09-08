@@ -102,6 +102,9 @@ export default function DatePage() {
 
   const saveEntry = useCallback(async () => {
     await saveEntryToStore(ymdStr);
+    window.dispatchEvent(
+      new CustomEvent('entry-saved', { detail: { ymd: ymdStr } })
+    );
   }, [saveEntryToStore, ymdStr]);
 
   const saveTimer = useRef<number | undefined>(undefined);
