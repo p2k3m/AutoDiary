@@ -11,7 +11,7 @@ interface AuthState {
   /** redirect the browser to the Cognito Hosted UI */
   login: (identityProvider?: string) => void;
   /** clear stored tokens and re-authenticate */
-  logout: () => void;
+  logout: (hardReload?: boolean) => void;
 }
 
 const region = import.meta.env.VITE_REGION as string;
@@ -56,13 +56,26 @@ export const useAuth = create<AuthState>((set) => {
           : '');
       window.location.assign(url);
     },
-    logout: () => {
+    logout: (hardReload) => {
       localStorage.removeItem('idToken');
       set({ status: 'unauthenticated', credentialProvider: undefined, userPrefix: undefined });
-      const url =
-        `https://${hostedUiDomain}/logout?` +
-        `client_id=${clientId}&logout_uri=${encodeURIComponent(redirectUri)}`;
-      window.location.assign(url);
+      (async () => {
+        indexedDB.deleteDatabase('entry-cache');
+        indexedDB.deleteDatabase('etag-cache');
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch {
+          // ignore cache cleanup failures
+        }
+        const url =
+          `https://${hostedUiDomain}/logout?` +
+          `client_id=${clientId}&logout_uri=${encodeURIComponent(redirectUri)}`;
+        window.location.assign(url);
+        if (hardReload) {
+          window.location.reload();
+        }
+      })();
     },
   };
 });
