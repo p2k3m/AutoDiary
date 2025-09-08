@@ -46,6 +46,36 @@ flowchart TD
 | `SUMMARY_TOKEN_LIMIT` | Token limit for generated summaries |
 | `BUCKET_NAME` | Target bucket for results |
 
+### Identity provider parameters
+
+The CDK stack looks up OAuth credentials from AWS Systems Manager Parameter Store. Create these parameters in the target account before deploying:
+
+| Parameter | Description |
+| --- | --- |
+| `google-client-id` | Google OAuth client ID |
+| `google-client-secret` | Google OAuth client secret |
+| `microsoft-client-id` | Microsoft application (client) ID |
+| `microsoft-client-secret` | Microsoft client secret |
+| `apple-client-id` | Apple Services ID |
+| `apple-team-id` | Apple developer team ID |
+| `apple-key-id` | Apple key ID |
+| `apple-private-key` | Contents of the Apple `.p8` private key |
+
+Example creation commands using the AWS CLI:
+
+```bash
+aws ssm put-parameter --name google-client-id --type String --value <GOOGLE_CLIENT_ID>
+aws ssm put-parameter --name google-client-secret --type SecureString --value <GOOGLE_CLIENT_SECRET>
+aws ssm put-parameter --name microsoft-client-id --type String --value <MICROSOFT_CLIENT_ID>
+aws ssm put-parameter --name microsoft-client-secret --type SecureString --value <MICROSOFT_CLIENT_SECRET>
+aws ssm put-parameter --name apple-client-id --type String --value <APPLE_CLIENT_ID>
+aws ssm put-parameter --name apple-team-id --type String --value <APPLE_TEAM_ID>
+aws ssm put-parameter --name apple-key-id --type String --value <APPLE_KEY_ID>
+aws ssm put-parameter --name apple-private-key --type SecureString --value "$(cat AuthKey.p8)"
+```
+
+The `.github/workflows/deploy.yml` workflow reads these parameters during `cdk deploy`. Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call `ssm:GetParameter` (and `kms:Decrypt` for secure strings).
+
 CDK workflows also expect repository variables `AWS_ACCOUNT_ID`, `AWS_REGION`, `DOMAIN_NAME`, and `HOSTED_ZONE_ID`, and a secret `AWS_ROLE_ARN` for assuming deployment roles.
 
 ## Local development
