@@ -20,8 +20,8 @@ const appStack = new AppStack(app, 'AppStack', {
 });
 
 const deployWeeklyReview =
-  app.node.tryGetContext('deployWeeklyReview') === 'true' ||
-  process.env.DEPLOY_WEEKLY_REVIEW === 'true';
+  app.node.tryGetContext('enableWeeklyLambda') === 'true' ||
+  process.env.ENABLE_WEEKLY_LAMBDA === 'true';
 
 if (deployWeeklyReview) {
   new WeeklyReviewStack(app, 'WeeklyReviewStack', {
