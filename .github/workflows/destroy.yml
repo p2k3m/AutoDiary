@@ -41,8 +41,8 @@ jobs:
 
       - name: Empty S3 buckets
         run: |
-          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json)
-          USER_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json)
+          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
+          USER_BUCKET=$(jq -r '.AppStack.UserdataBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
           aws s3 rm "s3://$WEB_BUCKET" --recursive || true
           aws s3 rm "s3://$USER_BUCKET" --recursive || true
 

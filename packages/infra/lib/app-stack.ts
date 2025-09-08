@@ -28,13 +28,15 @@ export class AppStack extends Stack {
   constructor(scope: Construct, id: string, props: AppStackProps) {
     super(scope, id, props);
 
+    const sanitizedDomain = props.domain.replace(/\./g, '-');
+
     const webBucket = new s3.Bucket(this, 'WebBucket', {
-      bucketName: `web-${props.domain}`,
+      bucketName: `web-${sanitizedDomain}`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
     const userBucket = new s3.Bucket(this, 'UserBucket', {
-      bucketName: `userdata-${props.domain}`,
+      bucketName: `userdata-${sanitizedDomain}`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: true,
       cors: [
