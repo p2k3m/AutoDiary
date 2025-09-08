@@ -105,8 +105,10 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (
-    (req.method === 'PUT' || req.method === 'DELETE') &&
-    req.url.includes('amazonaws.com')
+    req.url.includes('amazonaws.com') &&
+    (req.method === 'PUT' ||
+      req.method === 'DELETE' ||
+      (req.method === 'POST' && req.url.includes('?uploadId=')))
   ) {
     event.respondWith(
       fetch(req.clone()).catch(async () => {
@@ -116,7 +118,7 @@ self.addEventListener('fetch', (event) => {
           },
         });
         let body: ArrayBuffer | undefined;
-        if (req.method === 'PUT') {
+        if (req.method === 'PUT' || req.method === 'POST') {
           body = await req.clone().arrayBuffer();
         }
         await db.add('requests', {
