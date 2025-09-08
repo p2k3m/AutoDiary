@@ -4,7 +4,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm -ws run build",
+    "build": "yarn workspaces foreach -pt --all run build",
     "test": "yarn workspaces foreach -Av run test"
   }
 }

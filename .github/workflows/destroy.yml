@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Build infrastructure
+      - name: Build packages
         run: yarn build
 
       - name: Read bucket names
