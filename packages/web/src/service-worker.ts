@@ -103,7 +103,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (req.method === 'PUT' && req.url.includes('amazonaws.com')) {
+  if (
+    (req.method === 'PUT' || req.method === 'DELETE') &&
+    req.url.includes('amazonaws.com')
+  ) {
     event.respondWith(
       fetch(req.clone()).catch(async () => {
         const db = await openDB(QUEUE_DB, 1, {
@@ -111,9 +114,13 @@ self.addEventListener('fetch', (event) => {
             db.createObjectStore('requests', { autoIncrement: true });
           },
         });
-        const body = await req.clone().arrayBuffer();
+        let body: ArrayBuffer | undefined;
+        if (req.method === 'PUT') {
+          body = await req.clone().arrayBuffer();
+        }
         await db.add('requests', {
           url: req.url,
+          method: req.method,
           headers: [...req.headers],
           body,
         });
@@ -177,14 +184,15 @@ async function replayQueue() {
   const store = tx.objectStore('requests');
   let cursor = await store.openCursor();
   while (cursor) {
-    const { url, headers, body } = cursor.value as {
+    const { url, headers, body, method = 'PUT' } = cursor.value as {
       url: string;
       headers: [string, string][];
-      body: ArrayBuffer;
+      body?: ArrayBuffer;
+      method?: string;
     };
     try {
       await fetch(url, {
-        method: 'PUT',
+        method,
         headers: new Headers(headers),
         body,
       });

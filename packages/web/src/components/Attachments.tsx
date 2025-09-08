@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { useAuth } from '../state/useAuth';
@@ -78,7 +73,7 @@ export function Attachments({
       }));
     }
 
-    for (const { file, uuid, ext, key } of items) {
+    for (const { file, uuid, key } of items) {
       const uploader = new Upload({
         client,
         params: {
@@ -142,7 +137,12 @@ export function Attachments({
     const [removed] = next.splice(idx, 1);
     const key = attachmentKey(ymd, removed.uuid, removed.ext);
     try {
-      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+      const res = await client.send(
+        new DeleteObjectCommand({ Bucket: bucket, Key: key })
+      );
+      if (res.$metadata.httpStatusCode === 202) {
+        window.alert('Deletion queued for sync when back online.');
+      }
     } catch (err) {
       console.error(err);
     }
