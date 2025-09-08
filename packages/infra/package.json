@@ -7,11 +7,12 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "aws-cdk": "^2.158.0",
     "ts-node": "^10.9.1",
-    "aws-cdk": "^2.158.0"
+    "typescript": "^5.4.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.883.0",
     "aws-cdk-lib": "^2.158.0",
     "constructs": "^10.3.0"
   }

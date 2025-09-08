@@ -42,7 +42,9 @@ export class WeeklyReviewStack extends Stack {
       authType: lambda.FunctionUrlAuthType.AWS_IAM,
     });
 
-    props.bucket.grantReadWrite(fn);
+    props.bucket.grantRead(fn, '*/entries/*');
+    props.bucket.grantRead(fn, '*/connectors/*');
+    props.bucket.grantReadWrite(fn, '*/weekly/*');
 
     fn.addToRolePolicy(
       new iam.PolicyStatement({
