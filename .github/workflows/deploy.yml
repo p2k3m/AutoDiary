@@ -45,17 +45,31 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Run tests
+        id: test
+        run: yarn test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: packages/web/test-results
+
       - name: Build infrastructure
+        if: steps.test.outcome == 'success'
         working-directory: packages/infra
         run: yarn build
 
       - name: Deploy CDK stacks
+        if: steps.test.outcome == 'success'
         working-directory: packages/infra
         run: |
           rm -f cdk-outputs.json
           yarn cdk deploy --all --require-approval never -c domain=$DOMAIN_NAME -c hostedZoneId=$HOSTED_ZONE_ID -c deployWeeklyReview=$ENABLE_WEEKLY_LAMBDA -c bedrockTokenCap=$BEDROCK_TOKEN_CAP -c bedrockCostCap=$BEDROCK_COST_CAP -c bedrockCostPer1k=$BEDROCK_COST_PER_1K -c aiProvider=$AI_PROVIDER -c openaiApiKey=$OPENAI_API_KEY -c geminiApiKey=$GEMINI_API_KEY --outputs-file cdk-outputs.json
 
       - name: Build web
+        if: steps.test.outcome == 'success'
         working-directory: packages/web
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
@@ -76,16 +90,19 @@ jobs:
           yarn build
 
       - name: Sync web assets
+        if: steps.test.outcome == 'success'
         run: |
           WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json | tr '.' '-')
           aws s3 sync packages/web/dist s3://$WEB_BUCKET --delete
 
       - name: Invalidate CloudFront
+        if: steps.test.outcome == 'success'
         run: |
           DIST_ID=$(jq -r '.AppStack.CloudFrontDistributionId' packages/infra/cdk-outputs.json)
           aws cloudfront create-invalidation --distribution-id $DIST_ID --paths '/*'
 
       - name: Add CloudFront URL to summary
+        if: steps.test.outcome == 'success'
         run: |
           DIST_URL=$(jq -r '.AppStack.CloudFrontDistributionUrl' packages/infra/cdk-outputs.json)
           echo "CloudFront Distribution URL: $DIST_URL" >> $GITHUB_STEP_SUMMARY
