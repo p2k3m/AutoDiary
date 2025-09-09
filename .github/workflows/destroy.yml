@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Run tests
+        run: |
+          npx playwright install --with-deps
+          yarn test
+
       - name: Build packages
         run: yarn workspaces foreach -pt --all run build
 
