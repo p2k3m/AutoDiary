@@ -33,7 +33,7 @@ jobs:
       - name: Build packages
         run: yarn workspaces foreach -pt --all run build
 
-      - name: Read bucket names
+      - name: Read bucket names for cleanup
         run: |
           aws cloudformation describe-stacks --stack-name AppStack --query "Stacks[0].Outputs" > outputs.json
           WEB_BUCKET=$(jq -r '.[] | select(.OutputKey=="WebBucketName") | .OutputValue' outputs.json)
@@ -46,6 +46,6 @@ jobs:
           aws s3 rm "s3://$WEB_BUCKET" --recursive || true
           aws s3 rm "s3://$USER_BUCKET" --recursive || true
 
-      - name: Destroy stacks
+      - name: Destroy AppStack and EdgeStack
         run: yarn workspace infra cdk destroy AppStack EdgeStack --force --require-approval never
 
