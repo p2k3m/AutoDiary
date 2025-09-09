@@ -160,5 +160,6 @@ export class WeeklyReviewStack extends Stack {
     rule.addTarget(new targets.LambdaFunction(fn));
 
     new CfnOutput(this, 'WeeklyReviewFunctionUrl', { value: fnUrl.url });
+    console.log('WeeklyReview function URL:', fnUrl.url);
   }
 }
