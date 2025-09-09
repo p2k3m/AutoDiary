@@ -49,6 +49,8 @@ vi.mock('@aws-sdk/client-s3', () => {
 import {
   getSettings,
   putSettings,
+  putEntry,
+  putAttachment,
   __clearCachedSettings,
   getWeekly,
   __clearCachedWeekly,
@@ -137,5 +139,34 @@ describe('getConnectorStatus', () => {
     expect(first).toBe('added');
     expect(second).toBe('added');
     expect(sendMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('putAttachment', () => {
+  it('sets server-side encryption', async () => {
+    const file = { type: 'text/plain' } as unknown as File;
+    sendMock.mockResolvedValueOnce({});
+    await putAttachment('2024-01-01', 'uuid', 'txt', file);
+    const command = sendMock.mock.calls[0][0];
+    expect(command.input).toMatchObject({ ServerSideEncryption: 'AES256' });
+  });
+});
+
+describe('putEntry', () => {
+  it('sets server-side encryption', async () => {
+    sendMock.mockResolvedValueOnce({ ETag: '"1"' });
+    await putEntry('2024-01-01', '{}');
+    const command = sendMock.mock.calls[0][0];
+    expect(command.input).toMatchObject({ ServerSideEncryption: 'AES256' });
+  });
+});
+
+describe('putSettings', () => {
+  it('sets server-side encryption', async () => {
+    const settings = { theme: 'light', routineTemplate: [], timezone: 'UTC', e2ee: false };
+    sendMock.mockResolvedValueOnce({ ETag: '"1"' });
+    await putSettings(settings);
+    const command = sendMock.mock.calls[0][0];
+    expect(command.input).toMatchObject({ ServerSideEncryption: 'AES256' });
   });
 });
