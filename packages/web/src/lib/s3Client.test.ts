@@ -48,6 +48,7 @@ vi.mock('@aws-sdk/client-s3', () => {
 
 import {
   getSettings,
+  putSettings,
   __clearCachedSettings,
   getWeekly,
   __clearCachedWeekly,
@@ -63,18 +64,11 @@ beforeEach(() => {
 });
 
 describe('getSettings', () => {
-  it('returns cached settings on 304', async () => {
+  it('returns cached settings without second network call', async () => {
     const settings = { theme: 'light', routineTemplate: [], timezone: 'UTC', e2ee: false };
     sendMock.mockResolvedValueOnce({
       Body: Buffer.from(JSON.stringify(settings)),
       ETag: '"1"',
-    });
-    sendMock.mockImplementationOnce(() => {
-      const err = new Error('Not modified') as Error & {
-        $metadata?: { httpStatusCode: number };
-      };
-      err.$metadata = { httpStatusCode: 304 };
-      throw err;
     });
 
     const first = await getSettings();
@@ -82,7 +76,20 @@ describe('getSettings', () => {
 
     expect(first).toEqual(settings);
     expect(second).toEqual(settings);
-    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns updated cache after put without calling S3', async () => {
+    const settings = { theme: 'dark', routineTemplate: [], timezone: 'UTC', e2ee: false };
+    sendMock.mockResolvedValueOnce({ ETag: '"1"' });
+
+    await putSettings(settings);
+    sendMock.mockClear();
+
+    const result = await getSettings();
+
+    expect(result).toEqual(settings);
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });
 

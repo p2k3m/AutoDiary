@@ -306,6 +306,7 @@ export async function getWeekly(
 }
 
 export async function getSettings(): Promise<Settings | null> {
+  if (settingsCache) return settingsCache;
   const client = getClient();
   const key = settingsKey();
   const etag = await getEtag(key);
@@ -345,6 +346,7 @@ export async function putSettings(data: Settings): Promise<void> {
       })
     );
     if (res.ETag) await setEtag(key, res.ETag);
+    settingsCache = data;
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
