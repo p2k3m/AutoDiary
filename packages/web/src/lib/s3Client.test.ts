@@ -46,11 +46,19 @@ vi.mock('@aws-sdk/client-s3', () => {
   return { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command };
 });
 
-import { getSettings, __clearCachedSettings, getWeekly, __clearCachedWeekly } from './s3Client';
+import {
+  getSettings,
+  __clearCachedSettings,
+  getWeekly,
+  __clearCachedWeekly,
+  getConnectorStatus,
+  __clearCachedConnectorStatuses,
+} from './s3Client';
 
 beforeEach(() => {
   __clearCachedSettings();
   __clearCachedWeekly();
+  __clearCachedConnectorStatuses();
   sendMock.mockReset();
 });
 
@@ -98,6 +106,29 @@ describe('getWeekly', () => {
 
     expect(first?.aiSummary).toBe('Great week!');
     expect(second).toEqual(first);
+    expect(sendMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('getConnectorStatus', () => {
+  it('returns cached status on 304', async () => {
+    sendMock.mockResolvedValueOnce({
+      Body: Buffer.from(JSON.stringify({ status: 'added' })),
+      ETag: '"1"',
+    });
+    sendMock.mockImplementationOnce(() => {
+      const err = new Error('Not modified') as Error & {
+        $metadata?: { httpStatusCode: number };
+      };
+      err.$metadata = { httpStatusCode: 304 };
+      throw err;
+    });
+
+    const first = await getConnectorStatus('gmail');
+    const second = await getConnectorStatus('gmail');
+
+    expect(first).toBe('added');
+    expect(second).toBe('added');
     expect(sendMock).toHaveBeenCalledTimes(2);
   });
 });

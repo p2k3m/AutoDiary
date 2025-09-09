@@ -144,6 +144,18 @@ export function __clearCachedWeekly(): void {
 
 export type ConnectorStatus = 'added' | 'paused' | 'revoked';
 
+const connectorStatusCache = new Map<string, ConnectorStatus | null>();
+
+export function __clearCachedConnectorStatuses(): void {
+  connectorStatusCache.clear();
+}
+
+export function getCachedConnectorStatus(
+  provider: string
+): ConnectorStatus | null | undefined {
+  return connectorStatusCache.get(provider);
+}
+
 export async function getEntry(ymd: string): Promise<string | null> {
   const client = getClient();
   const key = entryKey(ymd);
@@ -356,14 +368,16 @@ export async function getConnectorStatus(
     const body = await new Response(res.Body as ReadableStream).text();
     if (res.ETag) await setEtag(key, res.ETag);
     const data = JSON.parse(body) as { status: ConnectorStatus };
+    connectorStatusCache.set(provider, data.status);
     return data.status;
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
     if (status === 304) {
-      return null;
+      return connectorStatusCache.get(provider) ?? null;
     }
     if (status === 404) {
+      connectorStatusCache.set(provider, null);
       return null;
     }
     throw err;
@@ -388,6 +402,7 @@ export async function putConnectorStatus(
       })
     );
     if (res.ETag) await setEtag(key, res.ETag);
+    connectorStatusCache.set(provider, status);
   } catch (err) {
     const statusCode = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
