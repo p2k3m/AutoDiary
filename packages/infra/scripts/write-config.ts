@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 async function main() {
-  const region = process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'us-east-1';
+  const region = process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'ap-south-1';
   const client = new CloudFormationClient({ region });
   const { Stacks } = await client.send(new DescribeStacksCommand({ StackName: 'AppStack' }));
   const stack = Stacks?.[0];
