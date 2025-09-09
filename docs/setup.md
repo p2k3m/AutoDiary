@@ -74,17 +74,17 @@ Set the following in GitHub before running workflows.
 - `OPENAI_API_KEY` – required when `AI_PROVIDER` is `openai`
 - `GEMINI_API_KEY` – required when `AI_PROVIDER` is `gemini`
 
-## Setup
+## Local development
 
 1. Install dependencies:
    ```bash
    yarn install
    ```
-2. Start local development:
+2. Start the web client in development mode:
    ```bash
    yarn workspace web dev
    ```
-3. Build and deploy infrastructure:
+3. Build and deploy the infrastructure for a given domain and hosted zone:
    ```bash
    yarn workspace infra build
    yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
@@ -94,27 +94,27 @@ Set the following in GitHub before running workflows.
    yarn test
    ```
 
-## GitHub workflows
+## Deploy and destroy workflows
 
 ### Deploy
 
-Trigger the deploy workflow after configuring variables and secrets:
+After configuring repository variables and secrets, trigger the deployment workflow:
 
 ```bash
 gh workflow run deploy.yml
 ```
 
-This workflow runs tests, deploys the CDK stacks, builds the web client and uploads assets to S3. The CloudFront distribution URL appears in the workflow summary.
+The workflow runs tests, deploys the CDK stacks, builds the web client, and uploads assets to S3. The CloudFront distribution URL is printed in the workflow summary.
 
 ### Destroy
 
-To tear down the stack:
+To tear everything down, trigger the destroy workflow:
 
 ```bash
 gh workflow run destroy.yml
 ```
 
-The workflow empties S3 buckets and destroys all CDK stacks for the configured domain and hosted zone.
+This empties S3 buckets and destroys all CDK stacks for the configured domain and hosted zone.
 
 ## Optional components
 
