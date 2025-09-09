@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 /**
+ * E2E test exercising the weekly review page. It seeds a full week of
+ * diary entries and ensures the UI reports the correct completion ratio,
+ * current streak and improvement suggestion.
+ */
+
+/**
  * Helper returning the Monday at the start of the given week.
  */
 function startOfWeek(date: Date): Date {
