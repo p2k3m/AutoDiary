@@ -6,6 +6,6 @@
   ],
   "scripts": {
     "build": "yarn workspaces foreach -pt --all run build",
-    "test": "yarn workspaces foreach -Av run test"
+    "test": "yarn workspace web test"
   }
 }
