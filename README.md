@@ -2,6 +2,8 @@
 
 AutoDiary is a serverless journaling platform that stores user entries in Amazon S3 and uses AWS Bedrock to generate weekly summaries. The project uses Yarn workspaces to manage the React web client and AWS CDK infrastructure.
 
+For step-by-step configuration instructions, see the [setup guide](docs/setup.md).
+
 ## Features
 
 - React web client served from CloudFront with private S3 storage for each user
