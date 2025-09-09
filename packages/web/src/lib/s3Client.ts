@@ -108,6 +108,7 @@ export async function putAttachment(
       Key: key,
       Body: file,
       ContentType: file.type,
+      ServerSideEncryption: 'AES256',
     })
   );
 }
@@ -202,6 +203,7 @@ export async function putEntry(ymd: string, body: string): Promise<void> {
         Key: key,
         Body: normalized,
         ContentType: 'application/json',
+        ServerSideEncryption: 'AES256',
         ...(inkUsed !== undefined
           ? { Metadata: { ink: inkUsed.toString() } }
           : {}),
@@ -342,6 +344,7 @@ export async function putSettings(data: Settings): Promise<void> {
         Key: key,
         Body: JSON.stringify(data),
         ContentType: 'application/json',
+        ServerSideEncryption: 'AES256',
         ...(etag ? { IfMatch: etag } : {}),
       })
     );
