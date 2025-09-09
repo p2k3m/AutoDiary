@@ -1,11 +1,15 @@
 import { test, expect, Page } from '@playwright/test';
 
-async function todayYmd(page: Page) {
-  return page.evaluate(() => new Date().toLocaleDateString('en-CA'));
+async function ymd(page: Page, offset = 0) {
+  return page.evaluate((o) => {
+    const d = new Date();
+    d.setDate(d.getDate() + o);
+    return d.toLocaleDateString('en-CA');
+  }, offset);
 }
 
-test('add, toggle and remove routine items', async ({ page }) => {
-  const today = await todayYmd(page);
+test('today entry allows adding, toggling and removing routine items', async ({ page }) => {
+  const today = await ymd(page);
   await page.goto(`/date/${today}`);
   // Add a new routine item
   await page.getByRole('button', { name: '+' }).click();
@@ -18,6 +22,58 @@ test('add, toggle and remove routine items', async ({ page }) => {
   // Remove item
   await page.getByRole('button', { name: '×' }).click();
   await expect(input).toHaveCount(0);
+});
+
+test('past entries allow toggling but not editing routine items', async ({ page }) => {
+  const past = await ymd(page, -1);
+  await page.route('**/entries/**', async (route) => {
+    const url = new URL(route.request().url());
+    const match = url.pathname.match(/entries\/(\d{4})\/(\d{2})\/(\d{2})\.json$/);
+    if (match) {
+      const key = `${match[1]}-${match[2]}-${match[3]}`;
+      if (key === past) {
+        await route.fulfill({
+          status: 200,
+          body: JSON.stringify({ routineTicks: [{ text: 'Exercise', done: false }] }),
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+
+  await page.goto(`/date/${past}`);
+  const checkbox = page.locator('input[type="checkbox"]').first();
+  await checkbox.check();
+  await expect(checkbox).toBeChecked();
+  await expect(page.getByRole('button', { name: '+' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '×' })).toHaveCount(0);
+});
+
+test('future entries allow toggling but not editing routine items', async ({ page }) => {
+  const future = await ymd(page, 1);
+  await page.route('**/entries/**', async (route) => {
+    const url = new URL(route.request().url());
+    const match = url.pathname.match(/entries\/(\d{4})\/(\d{2})\/(\d{2})\.json$/);
+    if (match) {
+      const key = `${match[1]}-${match[2]}-${match[3]}`;
+      if (key === future) {
+        await route.fulfill({
+          status: 200,
+          body: JSON.stringify({ routineTicks: [{ text: 'Exercise', done: false }] }),
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+
+  await page.goto(`/date/${future}`);
+  const checkbox = page.locator('input[type="checkbox"]').first();
+  await checkbox.check();
+  await expect(checkbox).toBeChecked();
+  await expect(page.getByRole('button', { name: '+' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '×' })).toHaveCount(0);
 });
 
 test('weekly review reflects routine completion and streak', async ({ page }) => {

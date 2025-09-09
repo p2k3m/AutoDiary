@@ -238,6 +238,7 @@ export default function DatePage() {
       </header>
 
       <RoutineBar
+        editable={ymdStr === todayYmd}
         items={routineTicks}
         onChange={(items) => {
           setRoutineTicks(items);
