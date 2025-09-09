@@ -26,10 +26,8 @@ const appStack = new AppStack(app, 'AppStack', {
 const enableWeeklyLambda =
   app.node.tryGetContext('enableWeeklyLambda') === 'true' ||
   process.env.ENABLE_WEEKLY_LAMBDA === 'true';
-
-if (enableWeeklyLambda) {
-  const weekly = new WeeklyReviewStack(app, 'WeeklyReviewStack', {
-    bucket: appStack.userBucket,
-  });
-  weekly.addDependency(appStack);
-}
+const weekly = new WeeklyReviewStack(app, 'WeeklyReviewStack', {
+  bucket: appStack.userBucket,
+  enableWeeklyLambda,
+});
+weekly.addDependency(appStack);
