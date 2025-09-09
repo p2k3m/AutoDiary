@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import { getEntry, putEntry, getSettings } from '../lib/s3Client';
-import { encrypt, decrypt } from '../lib/crypto';
+import {
+  getEntry as s3GetEntry,
+  putEntry as s3PutEntry,
+  getSettings as s3GetSettings,
+  type Settings,
+} from '../lib/s3Client';
+import { encrypt as cryptoEncrypt, decrypt as cryptoDecrypt } from '../lib/crypto';
 import { formatYmd } from '../lib/date';
 import type { RoutineItem } from '../components/RoutineBar';
 
@@ -24,6 +29,38 @@ interface DiaryState {
 
 const todayYmd = formatYmd(new Date());
 
+let getEntry = s3GetEntry;
+let putEntry = s3PutEntry;
+let getSettings = s3GetSettings;
+let encrypt = cryptoEncrypt;
+let decrypt = cryptoDecrypt;
+
+export function __setS3Client(mock: {
+  getEntry?: typeof s3GetEntry;
+  putEntry?: typeof s3PutEntry;
+  getSettings?: typeof s3GetSettings;
+}): void {
+  if (mock.getEntry) getEntry = mock.getEntry;
+  if (mock.putEntry) putEntry = mock.putEntry;
+  if (mock.getSettings) getSettings = mock.getSettings;
+}
+
+export function __setCrypto(mock: {
+  encrypt?: typeof cryptoEncrypt;
+  decrypt?: typeof cryptoDecrypt;
+}): void {
+  if (mock.encrypt) encrypt = mock.encrypt;
+  if (mock.decrypt) decrypt = mock.decrypt;
+}
+
+let cachedSettings: Settings | null = null;
+
+async function fetchSettings(): Promise<Settings | null> {
+  const settings = await getSettings();
+  if (settings) cachedSettings = settings;
+  return settings ?? cachedSettings;
+}
+
 export const useDiaryStore = create<DiaryState>((set, get) => ({
   currentDate: todayYmd,
   entries: {},
@@ -31,7 +68,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   loadEntry: async (ymd) => {
     if (get().entries[ymd]) return;
     try {
-      const settings = await getSettings();
+      const settings = await fetchSettings();
       const raw = await getEntry(ymd);
       const body = raw && settings?.e2ee ? decrypt(raw) : raw;
       if (body) {
@@ -80,7 +117,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   saveEntry: async (ymd) => {
     const entry = get().entries[ymd];
     if (!entry) return;
-    const settings = await getSettings();
+    const settings = await fetchSettings();
     try {
       await putEntry(
         ymd,
@@ -127,4 +164,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       entries: { ...state.entries, [ymd]: { ...state.entries[ymd], ...partial } },
     })),
 }));
+
+export function __resetDiaryStore(): void {
+  cachedSettings = null;
+  useDiaryStore.setState({ currentDate: todayYmd, entries: {} });
+}
 
