@@ -7,7 +7,7 @@ For step-by-step configuration instructions, see the [setup guide](docs/setup.md
 ## Features
 
 - React web client served from CloudFront with private S3 storage for each user
-- Cognito authentication with optional Google, Microsoft, and Apple connectors
+- Cognito authentication with optional Google, Microsoft, and Apple connectors (falls back to Cognito-only if OAuth parameters are missing)
 - AI-generated weekly summaries using Bedrock, OpenAI, or Gemini
 - Infrastructure defined with the AWS CDK and deployed through GitHub Actions
 
@@ -140,7 +140,9 @@ Workflows default to the `ap-south-1` region; set `AWS_REGION` to override.
 
 ## Optional connectors
 
-The CDK stack can enable social sign-in with Google, Microsoft, or Apple by looking up OAuth credentials from AWS Systems Manager Parameter Store. Create these parameters in the target AWS account before deploying:
+The CDK stack enables social sign-in with Google, Microsoft, or Apple only when their credentials exist in AWS Systems Manager Parameter Store. If any required parameter is missing, the deployment skips that connector and users authenticate with Cognito alone.
+
+Create these parameters in the target AWS account before deploying to enable a connector:
 
 | Parameter | Description |
 | --- | --- |
@@ -166,7 +168,7 @@ aws ssm put-parameter --name apple-key-id --type String --value <APPLE_KEY_ID>
 aws ssm put-parameter --name apple-private-key --type SecureString --value "$(cat AuthKey.p8)"
 ```
 
-Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call `ssm:GetParameter` (and `kms:Decrypt` for secure strings).
+Ensure the IAM role supplied via the `AWS_ROLE_ARN` secret can call `ssm:GetParameter` (and `kms:Decrypt` for secure strings). Deploying without one or more parameters simply skips that connector and keeps authentication Cognito-only.
 
 ## Weekly review Lambda
 
