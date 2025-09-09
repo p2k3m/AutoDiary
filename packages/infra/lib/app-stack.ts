@@ -132,81 +132,89 @@ export class AppStack extends Stack {
       },
     });
 
-    const googleClientId = ssm.StringParameter.valueForStringParameter(
-      this,
-      'google-client-id'
-    );
-    const googleClientSecret = ssm.StringParameter.valueForStringParameter(
-      this,
-      'google-client-secret'
-    );
-    const appleClientId = ssm.StringParameter.valueForStringParameter(
-      this,
-      'apple-client-id'
-    );
-    const appleTeamId = ssm.StringParameter.valueForStringParameter(
-      this,
-      'apple-team-id'
-    );
-    const appleKeyId = ssm.StringParameter.valueForStringParameter(
-      this,
-      'apple-key-id'
-    );
-    const applePrivateKey = ssm.StringParameter.valueForStringParameter(
-      this,
-      'apple-private-key'
-    );
-    const microsoftClientId = ssm.StringParameter.valueForStringParameter(
-      this,
-      'microsoft-client-id'
-    );
-    const microsoftClientSecret = ssm.StringParameter.valueForStringParameter(
-      this,
-      'microsoft-client-secret'
-    );
+    const lookup = (name: string): string | undefined => {
+      try {
+        return ssm.StringParameter.valueForStringParameter(this, name);
+      } catch {
+        return undefined;
+      }
+    };
 
-    const googleProvider = new cognito.UserPoolIdentityProviderGoogle(
-      this,
-      'Google',
-      {
+    const googleClientId = lookup('google-client-id');
+    const googleClientSecret = lookup('google-client-secret');
+    const appleClientId = lookup('apple-client-id');
+    const appleTeamId = lookup('apple-team-id');
+    const appleKeyId = lookup('apple-key-id');
+    const applePrivateKey = lookup('apple-private-key');
+    const microsoftClientId = lookup('microsoft-client-id');
+    const microsoftClientSecret = lookup('microsoft-client-secret');
+
+    const supportedIdentityProviders: cognito.UserPoolClientIdentityProvider[] = [
+      cognito.UserPoolClientIdentityProvider.COGNITO,
+    ];
+    const supportedLoginProviders: Record<string, string> = {};
+
+    let googleProvider: cognito.UserPoolIdentityProviderGoogle | undefined;
+    if (googleClientId && googleClientSecret) {
+      googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'Google', {
         userPool,
         clientId: googleClientId,
         clientSecret: googleClientSecret,
-      }
-    );
+      });
+      supportedIdentityProviders.push(
+        cognito.UserPoolClientIdentityProvider.GOOGLE
+      );
+      supportedLoginProviders['accounts.google.com'] = googleClientId;
+    }
 
-    const appleProvider = new cognito.UserPoolIdentityProviderApple(this, 'Apple', {
-      userPool,
-      clientId: appleClientId,
-      teamId: appleTeamId,
-      keyId: appleKeyId,
-      privateKeyValue: SecretValue.unsafePlainText(applePrivateKey),
-    });
-
-    const microsoftProvider = new cognito.UserPoolIdentityProviderOidc(
-      this,
-      'Microsoft',
-      {
+    let appleProvider: cognito.UserPoolIdentityProviderApple | undefined;
+    if (appleClientId && appleTeamId && appleKeyId && applePrivateKey) {
+      appleProvider = new cognito.UserPoolIdentityProviderApple(this, 'Apple', {
         userPool,
-        clientId: microsoftClientId,
-        clientSecret: microsoftClientSecret,
-        issuerUrl: 'https://login.microsoftonline.com/common/v2.0',
-        name: 'microsoft',
-      }
-    );
+        clientId: appleClientId,
+        teamId: appleTeamId,
+        keyId: appleKeyId,
+        privateKeyValue: SecretValue.unsafePlainText(applePrivateKey),
+      });
+      supportedIdentityProviders.push(
+        cognito.UserPoolClientIdentityProvider.APPLE
+      );
+      supportedLoginProviders['appleid.apple.com'] = appleClientId;
+    }
+
+    let microsoftProvider: cognito.UserPoolIdentityProviderOidc | undefined;
+    if (microsoftClientId && microsoftClientSecret) {
+      microsoftProvider = new cognito.UserPoolIdentityProviderOidc(
+        this,
+        'Microsoft',
+        {
+          userPool,
+          clientId: microsoftClientId,
+          clientSecret: microsoftClientSecret,
+          issuerUrl: 'https://login.microsoftonline.com/common/v2.0',
+          name: 'microsoft',
+        }
+      );
+      supportedIdentityProviders.push(
+        cognito.UserPoolClientIdentityProvider.custom('microsoft')
+      );
+      supportedLoginProviders['login.microsoftonline.com'] =
+        microsoftClientId;
+    }
 
     const userPoolClient = userPool.addClient('web', {
-      supportedIdentityProviders: [
-        cognito.UserPoolClientIdentityProvider.COGNITO,
-        cognito.UserPoolClientIdentityProvider.GOOGLE,
-        cognito.UserPoolClientIdentityProvider.APPLE,
-        cognito.UserPoolClientIdentityProvider.custom('microsoft'),
-      ],
+      supportedIdentityProviders,
     });
 
-    userPoolClient.node.addDependency(googleProvider);
-    userPoolClient.node.addDependency(appleProvider);
-    userPoolClient.node.addDependency(microsoftProvider);
+    if (googleProvider) {
+      userPoolClient.node.addDependency(googleProvider);
+    }
+    if (appleProvider) {
+      userPoolClient.node.addDependency(appleProvider);
+    }
+    if (microsoftProvider) {
+      userPoolClient.node.addDependency(microsoftProvider);
+    }
 
     const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
       allowUnauthenticatedIdentities: false,
@@ -216,11 +224,9 @@ export class AppStack extends Stack {
           providerName: userPool.userPoolProviderName,
         },
       ],
-      supportedLoginProviders: {
-        'accounts.google.com': googleClientId,
-        'appleid.apple.com': appleClientId,
-        'login.microsoftonline.com': microsoftClientId,
-      },
+      ...(Object.keys(supportedLoginProviders).length > 0
+        ? { supportedLoginProviders }
+        : {}),
     });
 
     const authRole = new iam.Role(this, 'AuthRole', {
