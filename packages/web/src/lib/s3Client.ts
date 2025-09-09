@@ -136,6 +136,12 @@ export interface WeeklyData {
   aiSummary?: string;
 }
 
+const weeklyCache = new Map<string, WeeklyData>();
+
+export function __clearCachedWeekly(): void {
+  weeklyCache.clear();
+}
+
 export type ConnectorStatus = 'added' | 'paused' | 'revoked';
 
 export async function getEntry(ymd: string): Promise<string | null> {
@@ -266,17 +272,19 @@ export async function getWeekly(
     const body = await new Response(res.Body as ReadableStream).text();
     if (res.ETag) await setEtag(key, res.ETag);
     const parsed = JSON.parse(body) as WeeklyData & { summary?: string };
-    return {
+    const data: WeeklyData = {
       connectorsDigest: parsed.connectorsDigest,
       aiSummary: parsed.aiSummary ?? parsed.summary,
       habits: parsed.habits,
       suggestions: parsed.suggestions,
     };
+    weeklyCache.set(key, data);
+    return data;
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
     if (status === 304) {
-      return null;
+      return weeklyCache.get(key) ?? null;
     }
     if (status === 404) {
       return null;
