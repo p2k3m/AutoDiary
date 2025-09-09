@@ -72,13 +72,13 @@ Create `packages/web/.env` and define:
 4. Run tests across all packages:
 
    ```bash
-   yarn workspaces foreach -Av run test
+   yarn test
    ```
 
 5. Build all packages:
 
    ```bash
-   yarn workspaces foreach -pt --all run build
+   yarn build
    ```
 
 ## Deployment and teardown workflows
