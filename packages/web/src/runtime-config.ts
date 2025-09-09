@@ -12,9 +12,22 @@ let config: RuntimeConfig | null = null;
 
 export async function loadConfig(): Promise<RuntimeConfig> {
   if (config) return config;
-  const res = await fetch('/app-config.json');
-  if (!res.ok) throw new Error('Failed to load config');
-  config = (await res.json()) as RuntimeConfig;
+  try {
+    const res = await fetch('/app-config.json');
+    if (!res.ok) throw new Error('Failed to load config');
+    config = (await res.json()) as RuntimeConfig;
+  } catch (err) {
+    console.warn('Could not load config, falling back to test mode', err);
+    config = {
+      region: '',
+      userPoolId: '',
+      userPoolClientId: '',
+      identityPoolId: '',
+      hostedUiDomain: '',
+      entryBucket: '',
+      testMode: true,
+    };
+  }
   return config;
 }
 
