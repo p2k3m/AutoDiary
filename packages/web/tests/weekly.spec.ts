@@ -78,3 +78,27 @@ test('weekly review shows habit stats, streaks and suggestions', async ({
   ).toBeVisible();
 });
 
+test('weekly summary persists across reloads', async ({ page }) => {
+  await page.route('**/entries/**', (route) =>
+    route.fulfill({ status: 404, body: '' })
+  );
+
+  let calls = 0;
+  await page.route('**/weekly/**', (route) => {
+    calls += 1;
+    if (calls === 1) {
+      return route.fulfill({
+        status: 200,
+        body: JSON.stringify({ aiSummary: 'Great week!' }),
+      });
+    }
+    return route.fulfill({ status: 304, body: '' });
+  });
+
+  await page.goto('/weekly');
+  await expect(page.getByText('Great week!')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText('Great week!')).toBeVisible();
+});
+
