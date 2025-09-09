@@ -89,7 +89,11 @@ Set the following in GitHub before running workflows.
    yarn workspace infra build
    yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
    ```
-4. Run tests across all packages:
+4. Write the runtime configuration and upload the web build to S3:
+   ```bash
+   yarn workspace infra postdeploy
+   ```
+5. Run tests across all packages:
    ```bash
    yarn test
    ```

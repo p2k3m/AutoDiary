@@ -69,13 +69,18 @@ Create `packages/web/.env` and define:
    yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
    ```
 
-4. Run tests across all packages:
+4. After deployment, generate the runtime config and upload the web build:
+   ```bash
+   yarn workspace infra postdeploy
+   ```
+
+5. Run tests across all packages:
 
    ```bash
    yarn test
    ```
 
-5. Build all packages:
+6. Build all packages:
 
    ```bash
    yarn build
