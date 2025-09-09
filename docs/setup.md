@@ -18,7 +18,7 @@ Create `packages/web/.env` with:
 
 | Variable | Description |
 | --- | --- |
-| `VITE_REGION` | AWS region for the web client |
+| `VITE_REGION` | AWS region for the web client (defaults to `ap-south-1`) |
 | `VITE_USER_POOL_ID` | Cognito user pool id |
 | `VITE_USER_POOL_CLIENT_ID` | Cognito app client id |
 | `VITE_IDENTITY_POOL_ID` | Cognito identity pool id |
@@ -56,10 +56,12 @@ Set the following in GitHub before running workflows.
 
 ### Variables
 
+Workflows default to the `ap-south-1` region; set `AWS_REGION` to override.
+
 | Variable | Description |
 | --- | --- |
 | `AWS_ACCOUNT_ID` | AWS account to deploy into |
-| `AWS_REGION` | AWS region for all stacks |
+| `AWS_REGION` | AWS region for all stacks (defaults to `ap-south-1`) |
 | `DOMAIN_NAME` | Root domain name for the application |
 | `HOSTED_ZONE_ID` | Route53 hosted zone ID |
 | `AI_PROVIDER` | AI provider for weekly summaries |
@@ -93,6 +95,7 @@ Set the following in GitHub before running workflows.
    ```bash
    yarn workspace infra postdeploy
    ```
+   An example config is available at `packages/web/app-config.example.json` and defaults to `ap-south-1`.
 5. Run tests across all packages:
    ```bash
    yarn test

@@ -5,7 +5,7 @@ const sendMock = vi.fn();
 
 vi.mock('../runtime-config.ts', () => ({
   getConfig: () => ({
-    region: 'us-east-1',
+    region: 'ap-south-1',
     entryBucket: 'bucket',
     userPoolId: '',
     userPoolClientId: '',
