@@ -1,0 +1,9 @@
+{
+  "region": "us-east-1",
+  "userPoolId": "pool",
+  "userPoolClientId": "client",
+  "identityPoolId": "identity",
+  "hostedUiDomain": "auth.example.com",
+  "entryBucket": "bucket",
+  "testMode": true
+}
