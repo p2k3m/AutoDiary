@@ -10,21 +10,23 @@ This guide covers prerequisites, configuration and deployment of AutoDiary.
 - AWS CLI configured locally
 - (Optional) [GitHub CLI](https://cli.github.com/) for triggering workflows
 
-## Environment variables
+## Configuration
 
-### Web client (.env)
+### Web client (`app-config.json`)
 
-Create `packages/web/.env` with:
+The web client loads settings from `packages/web/app-config.json`. Copy the example and edit the fields:
 
-| Variable | Description |
-| --- | --- |
-| `VITE_REGION` | AWS region for the web client (defaults to `ap-south-1`) |
-| `VITE_USER_POOL_ID` | Cognito user pool id |
-| `VITE_USER_POOL_CLIENT_ID` | Cognito app client id |
-| `VITE_IDENTITY_POOL_ID` | Cognito identity pool id |
-| `VITE_HOSTED_UI_DOMAIN` | Cognito hosted UI domain |
-| `VITE_ENTRY_BUCKET` | S3 bucket for journal entries |
-| `VITE_TEST_MODE` | Set to `true` to enable test fixtures |
+```bash
+cp packages/web/app-config.example.json packages/web/app-config.json
+```
+
+After deploying the stacks, generate the file automatically and upload the build:
+
+```bash
+yarn workspace infra postdeploy
+```
+
+The file is served as `/app-config.json` and the example defaults to `ap-south-1`.
 
 ### Weekly review Lambda
 
@@ -82,7 +84,7 @@ Workflows default to the `ap-south-1` region; set `AWS_REGION` to override.
    ```bash
    yarn install
    ```
-2. Start the web client in development mode:
+2. Start the web client in development mode (requires `packages/web/app-config.json`):
    ```bash
    yarn workspace web dev
    ```
@@ -91,11 +93,10 @@ Workflows default to the `ap-south-1` region; set `AWS_REGION` to override.
    yarn workspace infra build
    yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
    ```
-4. Write the runtime configuration and upload the web build to S3:
+4. Generate `packages/web/app-config.json` and upload the web build to S3:
    ```bash
    yarn workspace infra postdeploy
    ```
-   An example config is available at `packages/web/app-config.example.json` and defaults to `ap-south-1`.
 5. Run tests across all packages:
    ```bash
    yarn test
@@ -111,7 +112,7 @@ After configuring repository variables and secrets, trigger the deployment workf
 gh workflow run deploy.yml
 ```
 
-The workflow runs tests, deploys the CDK stacks, builds the web client, and uploads assets to S3. The CloudFront distribution URL is printed in the workflow summary.
+The workflow runs tests, deploys the CDK stacks, generates `app-config.json`, builds the web client, and uploads assets to S3. The CloudFront distribution URL is printed in the workflow summary.
 
 ### Destroy
 
