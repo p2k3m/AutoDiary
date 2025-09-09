@@ -17,6 +17,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
       CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,7 +40,12 @@ jobs:
       - name: Build web app
         run: yarn build
 
-      - name: Deploy CDK stacks
+      - name: Deploy AppStack
+        if: env.DOMAIN_NAME == ''
+        run: yarn workspace infra cdk deploy AppStack --require-approval never --outputs-file cdk-outputs.json
+
+      - name: Deploy EdgeStack and AppStack
+        if: env.DOMAIN_NAME != ''
         run: yarn workspace infra cdk deploy EdgeStack AppStack --require-approval never --outputs-file cdk-outputs.json
 
       - name: Post-deploy

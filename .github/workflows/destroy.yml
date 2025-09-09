@@ -14,6 +14,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
       CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +47,11 @@ jobs:
           aws s3 rm "s3://$WEB_BUCKET" --recursive || true
           aws s3 rm "s3://$USER_BUCKET" --recursive || true
 
+      - name: Destroy AppStack
+        if: env.DOMAIN_NAME == ''
+        run: yarn workspace infra cdk destroy AppStack --force --require-approval never
+
       - name: Destroy AppStack and EdgeStack
+        if: env.DOMAIN_NAME != ''
         run: yarn workspace infra cdk destroy AppStack EdgeStack --force --require-approval never
 
