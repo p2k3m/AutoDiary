@@ -34,19 +34,21 @@ flowchart TD
 - AWS CLI configured locally
 - (Optional) [GitHub CLI](https://cli.github.com/) for running workflows
 
-## Environment variables
+## Web client configuration
 
-Create `packages/web/.env` and define:
+The web client reads its settings from `packages/web/app-config.json`. Copy the example file and fill in your values:
 
-| Variable | Description |
-| --- | --- |
-| `VITE_REGION` | AWS region for the web client (defaults to `ap-south-1`) |
-| `VITE_USER_POOL_ID` | Cognito user pool id |
-| `VITE_USER_POOL_CLIENT_ID` | Cognito app client id |
-| `VITE_IDENTITY_POOL_ID` | Cognito identity pool id |
-| `VITE_HOSTED_UI_DOMAIN` | Cognito hosted UI domain (from `HostedUiDomain` stack output) |
-| `VITE_ENTRY_BUCKET` | S3 bucket for journal entries |
-| `VITE_TEST_MODE` | Set to `true` to enable test fixtures |
+```bash
+cp packages/web/app-config.example.json packages/web/app-config.json
+```
+
+After deploying the CDK stacks, you can instead generate the file and upload the build automatically:
+
+```bash
+yarn workspace infra postdeploy
+```
+
+The file is served as `/app-config.json` and the example defaults to `ap-south-1`.
 
 ## Local development
 
@@ -56,7 +58,7 @@ Create `packages/web/.env` and define:
    yarn install
    ```
 
-2. Start the web application:
+2. Start the web application (requires `packages/web/app-config.json`):
 
    ```bash
    yarn workspace web dev
@@ -69,11 +71,10 @@ Create `packages/web/.env` and define:
    yarn workspace infra cdk deploy --all -c domain=<DOMAIN> -c hostedZoneId=<ZONE_ID>
    ```
 
-4. After deployment, generate the runtime config and upload the web build:
+4. After deployment, generate `packages/web/app-config.json` and upload the web build:
    ```bash
    yarn workspace infra postdeploy
    ```
-   An example runtime config is available at `packages/web/app-config.example.json` and defaults to `ap-south-1`.
 
 5. Run tests across all packages:
 
@@ -124,7 +125,7 @@ Workflows default to the `ap-south-1` region; set `AWS_REGION` to override.
    gh workflow run deploy.yml
    ```
 
-3. The workflow runs tests, deploys the CDK stacks, builds the web client, and uploads assets to S3. The CloudFront distribution URL is printed in the workflow summary.
+3. The workflow runs tests, deploys the CDK stacks, generates `app-config.json`, builds the web client, and uploads assets to S3. The CloudFront distribution URL is printed in the workflow summary.
 
 ### Destroy (`destroy.yml`)
 
