@@ -16,6 +16,7 @@ import * as path from 'path';
 
 interface WeeklyReviewStackProps extends StackProps {
   bucket: s3.IBucket;
+  enableWeeklyLambda: boolean;
 }
 
 export class WeeklyReviewStack extends Stack {
@@ -40,6 +41,7 @@ export class WeeklyReviewStack extends Stack {
 
     const environment: Record<string, string> = {
       BUCKET_NAME: props.bucket.bucketName,
+      ENABLE_WEEKLY_LAMBDA: String(props.enableWeeklyLambda),
       BEDROCK_MODEL_ID: bedrockModelId,
       BEDROCK_TOKEN_CAP:
         this.node.tryGetContext('bedrockTokenCap') ||
@@ -153,11 +155,17 @@ export class WeeklyReviewStack extends Stack {
       );
     }
 
-    const rule = new events.Rule(this, 'WeeklyReviewSchedule', {
-      schedule: events.Schedule.cron({ weekDay: 'SUN', hour: '19', minute: '0' }),
-    });
+    if (props.enableWeeklyLambda) {
+      const rule = new events.Rule(this, 'WeeklyReviewSchedule', {
+        schedule: events.Schedule.cron({
+          weekDay: 'SUN',
+          hour: '19',
+          minute: '0',
+        }),
+      });
 
-    rule.addTarget(new targets.LambdaFunction(fn));
+      rule.addTarget(new targets.LambdaFunction(fn));
+    }
 
     new CfnOutput(this, 'WeeklyReviewFunctionUrl', { value: fnUrl.url });
     console.log('WeeklyReview function URL:', fnUrl.url);
