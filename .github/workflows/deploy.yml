@@ -36,10 +36,8 @@ jobs:
       - name: Deploy CDK stacks
         run: yarn workspace infra cdk deploy EdgeStack AppStack --require-approval never --outputs-file cdk-outputs.json
 
-      - name: Sync dist to S3
-        run: |
-          WEB_BUCKET=$(jq -r '.AppStack.WebBucketName' packages/infra/cdk-outputs.json)
-          aws s3 sync packages/web/dist s3://$WEB_BUCKET --delete
+      - name: Post-deploy
+        run: yarn workspace infra postdeploy
 
       - name: Invalidate CloudFront and report URL
         run: |
