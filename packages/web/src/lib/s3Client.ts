@@ -7,9 +7,9 @@ import {
 import { useAuth } from '../state/useAuth';
 import { getEtag, setEtag, clearEtag } from './etagCache';
 import { cacheEntry, getCachedEntry } from './entryCache';
+import { getConfig } from '../runtime-config.ts';
 
-const region = import.meta.env.VITE_REGION as string;
-const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
+const { region, entryBucket: bucket } = getConfig();
 
 function getClient() {
   const creds = useAuth.getState().credentialProvider;

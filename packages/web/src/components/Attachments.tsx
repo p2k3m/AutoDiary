@@ -5,6 +5,7 @@ import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { useAuth } from '../state/useAuth';
 import { attachmentKey } from '../lib/s3Client';
+import { getConfig } from '../runtime-config.ts';
 
 interface AttachmentMeta {
   name: string;
@@ -27,8 +28,7 @@ export function Attachments({
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [dragging, setDragging] = useState(false);
-  const region = import.meta.env.VITE_REGION as string;
-  const bucket = import.meta.env.VITE_ENTRY_BUCKET as string;
+  const { region, entryBucket: bucket } = getConfig();
 
   const client = useMemo(() => {
     const creds = useAuth.getState().credentialProvider;

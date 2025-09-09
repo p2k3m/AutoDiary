@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
+import { getConfig } from '../runtime-config.ts';
 
 interface AuthState {
   /** current authentication status */
@@ -14,12 +15,14 @@ interface AuthState {
   logout: (hardReload?: boolean) => void;
 }
 
-const region = import.meta.env.VITE_REGION as string;
-const userPoolId = import.meta.env.VITE_USER_POOL_ID as string;
-const clientId = import.meta.env.VITE_USER_POOL_CLIENT_ID as string;
-const identityPoolId = import.meta.env.VITE_IDENTITY_POOL_ID as string;
-const hostedUiDomain = import.meta.env.VITE_HOSTED_UI_DOMAIN as string;
-const testMode = import.meta.env.VITE_TEST_MODE === 'true';
+const {
+  region,
+  userPoolId,
+  userPoolClientId: clientId,
+  identityPoolId,
+  hostedUiDomain,
+  testMode,
+} = getConfig();
 
 function decodeJwt<T extends Record<string, unknown>>(token: string): T {
   const payload = token.split('.')[1];
