@@ -10,6 +10,29 @@ This guide covers prerequisites, configuration and deployment of AutoDiary.
 - AWS CLI configured locally
 - (Optional) [GitHub CLI](https://cli.github.com/) for triggering workflows
 
+### AWS resource prerequisites
+
+AutoDiary requires a domain managed in Amazon Route 53 and relies on Amazon Cognito for authentication.
+
+1. **Register or import a domain in Route 53**
+   - Console: follow [Registering a new domain](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-register.html) or [Migrating DNS service to Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/migrate-dns-domain-inactive.html).
+   - CLI example to register:
+     ```bash
+     aws route53domains register-domain --domain-name example.com --duration-in-years 1
+     ```
+2. **Create a public hosted zone**
+   ```bash
+   aws route53 create-hosted-zone --name example.com --caller-reference $(uuidgen)
+   ```
+   Update your registrar's nameservers if you imported an existing domain.
+3. **Retrieve the hosted zone ID**
+   ```bash
+   aws route53 list-hosted-zones-by-name --dns-name example.com --query "HostedZones[0].Id" --output text
+   ```
+   Use this value for the `HOSTED_ZONE_ID` repository variable.
+
+The CDK stack provisions the Amazon Cognito User Pool, Identity Pool, and Hosted UI automatically. To enable optional social logins (Google, Microsoft or Apple), store the corresponding OAuth credentials in AWS Systems Manager Parameter Store as described in [Social connectors](#social-connectors).
+
 ## Configuration
 
 ### Web client (`app-config.json`)
