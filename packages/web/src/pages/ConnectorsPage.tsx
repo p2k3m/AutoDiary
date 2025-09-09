@@ -45,14 +45,18 @@ export default function ConnectorsPage() {
 
   useEffect(() => {
     (async () => {
-      for (const p of providers) {
-        try {
-          const status = await getConnectorStatus(p.key);
-          setStatuses((s) => ({ ...s, [p.key]: status }));
-        } catch (err) {
-          console.error('Failed to load connector', p.key, err);
-        }
-      }
+      const entries = await Promise.all(
+        providers.map(async (p) => {
+          try {
+            const status = await getConnectorStatus(p.key);
+            return [p.key, status] as const;
+          } catch (err) {
+            console.error('Failed to load connector', p.key, err);
+            return [p.key, null] as const;
+          }
+        })
+      );
+      setStatuses((s) => ({ ...s, ...Object.fromEntries(entries) }));
     })();
   }, []);
 
