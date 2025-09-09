@@ -91,7 +91,7 @@ Set the following in GitHub before running workflows.
    ```
 4. Run tests across all packages:
    ```bash
-   yarn workspaces foreach -Av run test
+   yarn test
    ```
 
 ## GitHub workflows

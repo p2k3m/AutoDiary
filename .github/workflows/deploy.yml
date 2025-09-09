@@ -36,7 +36,7 @@ jobs:
           yarn test
 
       - name: Build packages
-        run: yarn workspaces foreach -pt --all run build
+        run: yarn build
 
       - name: Deploy CDK stacks
         run: yarn workspace infra cdk deploy EdgeStack AppStack --require-approval never --outputs-file cdk-outputs.json
