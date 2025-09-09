@@ -3,6 +3,7 @@ import {
   getConnectorStatus,
   putConnectorStatus,
   type ConnectorStatus,
+  getCachedConnectorStatus,
 } from '../lib/s3Client';
 
 const providers = [
@@ -29,7 +30,18 @@ const providers = [
 ] as const;
 
 export default function ConnectorsPage() {
-  const [statuses, setStatuses] = useState<Record<string, ConnectorStatus | null>>({});
+  const [statuses, setStatuses] = useState<Record<string, ConnectorStatus | null>>(
+    () => {
+      const init: Record<string, ConnectorStatus | null> = {};
+      for (const p of providers) {
+        const cached = getCachedConnectorStatus(p.key);
+        if (cached !== undefined) {
+          init[p.key] = cached;
+        }
+      }
+      return init;
+    }
+  );
 
   useEffect(() => {
     (async () => {
