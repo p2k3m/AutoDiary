@@ -119,6 +119,12 @@ export interface Settings {
   e2ee: boolean;
 }
 
+let settingsCache: Settings | null = null;
+
+export function __clearCachedSettings(): void {
+  settingsCache = null;
+}
+
 export interface WeeklyData {
   habits?: { name: string; done: number; total: number; streak: number }[];
   suggestions?: string[];
@@ -289,12 +295,13 @@ export async function getSettings(): Promise<Settings | null> {
     );
     const body = await new Response(res.Body as ReadableStream).text();
     if (res.ETag) await setEtag(key, res.ETag);
-    return JSON.parse(body) as Settings;
+    settingsCache = JSON.parse(body) as Settings;
+    return settingsCache;
   } catch (err) {
     const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
       ?.httpStatusCode;
     if (status === 304) {
-      return null;
+      return settingsCache;
     }
     if (status === 404) {
       return null;
