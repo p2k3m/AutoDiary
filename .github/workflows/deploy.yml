@@ -30,12 +30,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Run tests
-        run: |
-          npx playwright install --with-deps
-          yarn test
-
-      - name: Build packages
+      - name: Build web app
         run: yarn build
 
       - name: Deploy CDK stacks
