@@ -85,14 +85,16 @@ Configure the Lambda with environment variables according to the chosen AI provi
 ## Repository variables and secrets
 All variables and secrets below must exist in your repository before any workflow runs.
 
-Add them through either the GitHub web UI or the `gh` CLI:
+Create them through either the GitHub web UI or the `gh` CLI:
 
-- **GitHub UI:** Navigate to *Settings > Secrets and variables > Actions* and add each entry under the **Variables** or **Secrets** tab.
-- **GitHub CLI:** for example,
-  ```bash
-  gh variable set AWS_ACCOUNT_ID --body <id>
-  gh secret set AWS_ROLE_ARN --body <arn>
-  ```
+1. **GitHub UI**
+   - Navigate to *Settings → Secrets and variables → Actions*.
+   - Add each entry under the **Variables** or **Secrets** tab.
+2. **GitHub CLI**
+   ```bash
+   gh variable set AWS_ACCOUNT_ID --body <id>
+   gh secret set AWS_ROLE_ARN --body <arn>
+   ```
 
 See the GitHub docs for managing [actions variables](https://docs.github.com/actions/using-workflows/managing-variables) and [secrets](https://docs.github.com/actions/security-guides/encrypted-secrets).
 
