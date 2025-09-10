@@ -20,16 +20,23 @@ AutoDiary requires a domain managed in Amazon Route 53 and relies on Amazon Cogn
      ```bash
      aws route53domains register-domain --domain-name example.com --duration-in-years 1
      ```
+   - Verify the registration:
+     ```bash
+     aws route53domains get-domain-detail --domain-name example.com
+     ```
 2. **Create a public hosted zone**
-   ```bash
-   aws route53 create-hosted-zone --name example.com --caller-reference $(uuidgen)
-   ```
-   Update your registrar's nameservers if you imported an existing domain.
+   - Console: follow [Creating a public hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingHostedZone.html)
+   - CLI example:
+     ```bash
+     aws route53 create-hosted-zone --name example.com --caller-reference $(uuidgen)
+     ```
+   - If you imported an existing domain, update your registrar's nameserver records to those provided by Route 53.
 3. **Retrieve the hosted zone ID**
-   ```bash
-   aws route53 list-hosted-zones-by-name --dns-name example.com --query "HostedZones[0].Id" --output text
-   ```
-   Use this value for the `HOSTED_ZONE_ID` repository variable.
+   - CLI example:
+     ```bash
+     aws route53 list-hosted-zones-by-name --dns-name example.com --query "HostedZones[0].Id" --output text
+     ```
+   - Use this value for the `HOSTED_ZONE_ID` repository variable.
 
 The CDK stack provisions the Amazon Cognito User Pool, Identity Pool, and Hosted UI automatically. To enable optional social logins (Google, Microsoft or Apple), store the corresponding OAuth credentials in AWS Systems Manager Parameter Store as described in [Social connectors](#social-connectors).
 
